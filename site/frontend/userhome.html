@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit – Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="user-topbar">
+    <span id="userWelcome"></span>
+    <button onclick="logout()" class="logout-btn">Logout</button>
+  </div>
+
+  <div class="user-home">
+    <h1>Welcome to Rolebit</h1>
+    <p>This is your home. More features coming soon.</p>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+  const u = localStorage.getItem("rolebit_user");
+
+  if (u === null || u === "null" || u === "") {
+    window.location.href = "signin.html";
+  } else {
+    document.getElementById("userWelcome").innerText = "Welcome, " + u;
+  }
+
+  function logout() {
+    localStorage.removeItem("rolebit_user");
+    window.location.href = "signin.html";
+  }
+</script>
+
+</body>
+</html>

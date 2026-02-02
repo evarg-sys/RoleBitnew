@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit – Waitlist</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+  <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+  <a href="index.html">Home</a>
+  <a href="about.html">About Us</a>
+  <a href="why.html">Why Us</a>
+  
+  <div class="admin-section">
+    <button class="admin-toggle" onclick="toggleAdminInput()">🔐 Admin</button>
+    <div class="admin-input-wrapper" id="adminWrapper">
+      <input type="password" id="adminPassword" placeholder="Password">
+      <button onclick="submitAdminPassword()">Unlock</button>
+      <div class="admin-status" id="adminStatus"></div>
+    </div>
+  </div>
+</div>
+
+<div class="main hero">
+  <h1>Join the Waitlist</h1>
+  <p>Be first to try Rolebit.</p>
+
+  <form action="success.html" class="form">
+    <input type="text" placeholder="Full Name" required>
+    <input type="email" placeholder="Email Address" required>
+    <input type="text" placeholder="School / Team Name">
+    <button class="btn" type="submit">Join</button>
+  </form>
+</div>
+
+</body>
+</html>

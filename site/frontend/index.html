@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit – Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="topbar">
+  <span id="welcomeText" style="display:none;"></span>
+  <button id="signinBtn" class="signin-btn" onclick="location.href='signin.html'">
+    Sign In
+  </button>
+  <button id="logoutBtn" class="signin-btn" onclick="logout()" style="display:none;">
+    Logout
+  </button>
+</div>
+
+
+  <div style="position:fixed;top:20px;right:30px;z-index:999;">
+  <span id="welcome"></span>
+  <button id="logoutBtn" onclick="logout()" style="display:none">Logout</button>
+</div>
+
+<script src="script.js"></script>
+
+
+<div class="sidebar">
+  <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+  <a href="index.html">Home</a>
+  <a href="about.html">About Us</a>
+  <a href="why.html">Why Us</a>
+  
+  <div class="admin-section">
+    <button class="admin-toggle" onclick="toggleAdminInput()">🔐 Admin</button>
+    <div class="admin-input-wrapper" id="adminWrapper">
+      <input type="password" id="adminPassword" placeholder="Password">
+      <button onclick="submitAdminPassword()">Unlock</button>
+      <div class="admin-status" id="adminStatus"></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="main hero">
+  <h1>ROLEBIT</h1>
+  <p>AI-powered collaboration for group projects.</p>
+  <p>Assign tasks. Track effort. Win together.</p>
+  <a href="waitlist.html"><button class="btn">Join the Waitlist</button></a>
+</div>
+
+</body>
+</html>

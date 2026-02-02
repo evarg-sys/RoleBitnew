@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit – Coming Soon</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .coming-soon-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 70px;
+      background: radial-gradient(circle at top, #14151a, #0b0c10);
+    }
+
+    .coming-soon-card {
+      text-align: center;
+      max-width: 600px;
+      padding: 60px 40px;
+      animation: fadeInScale 0.8s ease-out;
+    }
+
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .coming-soon-card h1 {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff, rgba(255,255,255,0.7));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: slideDown 0.6s ease-out 0.1s both;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .coming-soon-card p {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 12px;
+      line-height: 1.6;
+      animation: slideDown 0.6s ease-out 0.2s both;
+    }
+
+    .coming-soon-subtitle {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.55);
+      margin-top: 24px;
+      animation: slideDown 0.6s ease-out 0.3s both;
+    }
+
+    .user-welcome {
+      display: inline-block;
+      margin-top: 32px;
+      padding: 12px 28px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      color: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
+      animation: slideDown 0.6s ease-out 0.4s both;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      margin-top: 40px;
+      animation: slideDown 0.6s ease-out 0.5s both;
+    }
+
+    .coming-soon-card button {
+      padding: 12px 28px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+    }
+
+    .primary-btn {
+      background: white;
+      color: black;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255,255,255,0.25);
+    }
+
+    .secondary-btn {
+      background: rgba(255,255,255,0.08);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 0 12px rgba(255,255,255,0.15);
+    }
+
+    .decorative-element {
+      margin-top: 60px;
+      font-size: 4rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-12px);
+      }
+    }
+
+    .back-home-link {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: #ddd;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+
+    .back-home-link:hover {
+      color: white;
+    }
+
+    .sidebar {
+      width: 70px;
+      background: linear-gradient(to bottom, rgba(18,18,22,0.9), rgba(12,12,16,0.9));
+      backdrop-filter: blur(10px);
+      height: 100vh;
+      padding: 25px 15px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      overflow: hidden;
+      transition: 0.35s ease;
+      border-right: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .sidebar:hover {
+      width: 220px;
+    }
+
+    .sidebar a {
+      opacity: 0;
+      white-space: nowrap;
+      transition: 0.3s ease;
+      display: block;
+      color: white;
+      text-decoration: none;
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+
+    .sidebar:hover a {
+      opacity: 0.85;
+    }
+
+    .sidebar a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .logo-img {
+      width: 45px;
+      margin-bottom: 50px;
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.35));
+    }
+
+    @media (max-width: 768px) {
+      .coming-soon-wrapper {
+        margin-left: 0;
+      }
+
+      .coming-soon-card {
+        padding: 40px 20px;
+      }
+
+      .coming-soon-card h1 {
+        font-size: 2.2rem;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+  <a href="index.html">Home</a>
+</div>
+
+<a href="index.html" class="back-home-link">← Back to Home</a>
+
+<div class="coming-soon-wrapper">
+  <div class="coming-soon-card">
+    <h1>You're In! 🚀</h1>
+    <p>Welcome to Rolebit,<br><span id="userDisplay"></span></p>
+    <p>We're building something special.</p>
+    <div class="coming-soon-subtitle">
+      The full dashboard is coming soon when we go live.
+    </div>
+    
+    <div class="decorative-element">✨</div>
+
+    <div class="action-buttons">
+      <button class="primary-btn" onclick="location.href='index.html'">Back to Home</button>
+      <button class="secondary-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+  const user = localStorage.getItem("rolebit_user");
+  if (!user) {
+    window.location.href = "signin.html";
+  } else {
+    document.getElementById("userDisplay").innerText = user;
+  }
+</script>
+
+</body>
+</html>

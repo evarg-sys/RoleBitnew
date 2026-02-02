@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit – Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Dashboard-specific styles */
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 30px;
+      margin-left: 70px;
+      padding: 40px 60px;
+      min-height: 100vh;
+      transition: 0.35s ease;
+    }
+
+    .sidebar:hover ~ .dashboard-container {
+      margin-left: 220px;
+    }
+
+    .dashboard-main {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-header h1 {
+      font-size: 2.5rem;
+      margin: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .dashboard-header .logout-btn,
+    .dashboard-header .edit-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: 0.3s ease;
+    }
+
+    .dashboard-header .edit-btn {
+      background: rgba(100, 200, 255, 0.15);
+      border-color: rgba(100, 200, 255, 0.3);
+    }
+
+    .dashboard-header .edit-btn.active {
+      background: rgba(100, 200, 255, 0.3);
+      border-color: rgba(100, 200, 255, 0.5);
+      box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
+    }
+
+    .dashboard-header .logout-btn:hover,
+    .dashboard-header .edit-btn:hover {
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 0 12px rgba(255,255,255,0.2);
+    }
+
+    /* Projects Section */
+    .projects-section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: white;
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .project-card {
+      background: rgba(40, 40, 45, 0.5);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      transition: 0.5s ease;
+      pointer-events: none;
+    }
+
+    .project-card:hover::before {
+      left: 100%;
+    }
+
+    .project-card:hover {
+      background: rgba(50, 50, 55, 0.7);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+    }
+
+    .project-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .project-desc {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .project-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .project-progress {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #fff, rgba(255,255,255,0.6));
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    .project-deadline {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+      text-align: right;
+    }
+
+    /* Timeline Section */
+    .timeline-section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: white;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .timeline-item {
+      background: rgba(40, 40, 45, 0.5);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-left: 3px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .timeline-item:hover {
+      background: rgba(50, 50, 55, 0.7);
+      border-left-color: rgba(255,255,255,0.6);
+      transform: translateX(4px);
+    }
+
+    .timeline-item.upcoming {
+      border-left-color: rgba(255,255,255,0.5);
+    }
+
+    .timeline-item.overdue {
+      border-left-color: rgba(255,100,100,0.7);
+      background: rgba(60, 40, 40, 0.4);
+    }
+
+    .timeline-date {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .timeline-task {
+      font-size: 1rem;
+      color: white;
+      font-weight: 500;
+    }
+
+    .timeline-project {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.55);
+      margin-top: 6px;
+    }
+
+    /* Team Members Sidebar */
+    .team-sidebar {
+      background: rgba(40, 40, 45, 0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      height: fit-content;
+      position: sticky;
+      top: 40px;
+    }
+
+    .team-sidebar h3 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      color: white;
+    }
+
+    .team-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .team-member {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(60, 60, 65, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .team-member:hover {
+      background: rgba(60, 60, 65, 0.6);
+    }
+
+    .member-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .member-name {
+      font-size: 0.9rem;
+      color: white;
+      flex: 1;
+    }
+
+    .member-role {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Empty state */
+    .empty-state {
+      background: rgba(40, 40, 45, 0.5);
+      border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 40px;
+      text-align: center;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .empty-state p {
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    /* ================= EDIT MODE ================= */
+    .edit-mode-active .project-card,
+    .edit-mode-active .timeline-item,
+    .edit-mode-active .team-member {
+      cursor: text;
+      position: relative;
+    }
+
+    .edit-mode-active .project-card:hover,
+    .edit-mode-active .timeline-item:hover {
+      border-color: rgba(100, 200, 255, 0.4) !important;
+      background: rgba(50, 60, 80, 0.6) !important;
+    }
+
+    .project-title.editable,
+    .project-desc.editable,
+    .timeline-task.editable,
+    .timeline-project.editable,
+    .member-name.editable {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid rgba(100, 200, 255, 0.3);
+      padding: 4px 2px;
+      transition: all 0.2s ease;
+    }
+
+    .project-title.editable:focus,
+    .project-desc.editable:focus,
+    .timeline-task.editable:focus,
+    .timeline-project.editable:focus,
+    .member-name.editable:focus {
+      outline: none;
+      border-bottom-color: rgba(100, 200, 255, 0.8);
+      background: rgba(100, 200, 255, 0.05);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .dashboard-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 30px 40px;
+      }
+
+      .team-sidebar {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-container {
+        margin-left: 70px;
+        padding: 20px;
+      }
+
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .dashboard-header h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+  <a href="dashboard.html">Dashboard</a>
+  <a href="index.html">Home</a>
+  
+  <div class="admin-section">
+    <button class="admin-toggle" onclick="toggleAdminInput()">🔐 Admin</button>
+    <div class="admin-input-wrapper" id="adminWrapper">
+      <input type="password" id="adminPassword" placeholder="Password">
+      <button onclick="submitAdminPassword()">Unlock</button>
+      <div class="admin-status" id="adminStatus"></div>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-container">
+  <div class="dashboard-main">
+    <div class="dashboard-header">
+      <h1>Dashboard</h1>
+      <div class="header-actions">
+        <button id="editModeBtn" class="edit-btn" onclick="toggleEditMode()" style="display:none;">✏️ Edit Mode</button>
+        <button onclick="logout()" class="logout-btn">Logout</button>
+      </div>
+    </div>
+
+    <!-- Projects Section -->
+    <section class="projects-section">
+      <h2>Current Projects</h2>
+      <div class="projects-grid" id="projectsGrid">
+        <!-- Projects will load here -->
+      </div>
+    </section>
+
+    <!-- Timeline Section -->
+    <section class="timeline-section">
+      <h2>Timeline & Upcoming Tasks</h2>
+      <div class="timeline" id="timelineList">
+        <!-- Timeline will load here -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Team Members Sidebar -->
+  <aside class="team-sidebar">
+    <h3>Team Members</h3>
+    <div class="team-list" id="teamList">
+      <!-- Team members will load here -->
+    </div>
+  </aside>
+</div>
+
+<script src="script.js"></script>
+<script>
+  // Check if user is logged in
+  const user = localStorage.getItem("rolebit_user");
+  if (!user) {
+    window.location.href = "signin.html";
+  }
+
+  // Mock data - replace with real API calls
+  const mockProjects = [
+    {
+      id: 1,
+      title: "Website Redesign",
+      description: "Revamp the landing page and user onboarding flow",
+      progress: 65,
+      deadline: "Feb 15, 2026",
+      members: 4
+    },
+    {
+      id: 2,
+      title: "API Integration",
+      description: "Connect payment processing and analytics",
+      progress: 30,
+      deadline: "Mar 2, 2026",
+      members: 3
+    },
+    {
+      id: 3,
+      title: "Mobile App Beta",
+      description: "Launch iOS and Android versions",
+      progress: 45,
+      deadline: "Mar 20, 2026",
+      members: 5
+    }
+  ];
+
+  const mockTimeline = [
+    { date: "Feb 10", task: "Design mockups due", project: "Website Redesign", status: "upcoming" },
+    { date: "Feb 15", task: "Client review", project: "Website Redesign", status: "upcoming" },
+    { date: "Feb 20", task: "Backend API ready", project: "API Integration", status: "upcoming" },
+    { date: "Mar 1", task: "Testing phase begins", project: "Mobile App Beta", status: "upcoming" },
+    { date: "Mar 15", task: "Final deployment", project: "Mobile App Beta", status: "upcoming" }
+  ];
+
+  const mockTeam = [
+    { name: "Alex Chen", role: "Product Lead" },
+    { name: "Jordan Lee", role: "Designer" },
+    { name: "Sam Parker", role: "Developer" },
+    { name: "Casey Brown", role: "QA Engineer" },
+    { name: "Morgan Davis", role: "DevOps" }
+  ];
+
+  // Render Projects
+  function renderProjects() {
+    const grid = document.getElementById("projectsGrid");
+    grid.innerHTML = mockProjects.map(project => `
+      <div class="project-card">
+        <div class="project-title">${project.title}</div>
+        <div class="project-desc">${project.description}</div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${project.progress}%"></div>
+        </div>
+        <div class="project-meta">
+          <div class="project-progress">${project.progress}% Complete</div>
+          <div class="project-deadline">${project.deadline}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // Render Timeline
+  function renderTimeline() {
+    const timeline = document.getElementById("timelineList");
+    timeline.innerHTML = mockTimeline.map(item => `
+      <div class="timeline-item ${item.status}">
+        <div class="timeline-date">${item.date}</div>
+        <div class="timeline-task">${item.task}</div>
+        <div class="timeline-project">in ${item.project}</div>
+      </div>
+    `).join("");
+  }
+
+  // Render Team Members
+  function renderTeam() {
+    const teamList = document.getElementById("teamList");
+    teamList.innerHTML = mockTeam.map((member, i) => {
+      const initials = member.name.split(" ").map(n => n[0]).join("");
+      return `
+        <div class="team-member">
+          <div class="member-avatar">${initials}</div>
+          <div>
+            <div class="member-name">${member.name}</div>
+            <div class="member-role">${member.role}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Initialize
+  renderProjects();
+  renderTimeline();
+  renderTeam();
+
+  // Check if admin and show edit button
+  if (isAdmin()) {
+    document.getElementById("editModeBtn").style.display = "block";
+  }
+
+  // Edit mode toggle
+  let editModeEnabled = false;
+
+  function toggleEditMode() {
+    editModeEnabled = !editModeEnabled;
+    const container = document.querySelector(".dashboard-container");
+    const btn = document.getElementById("editModeBtn");
+
+    if (editModeEnabled) {
+      container.classList.add("edit-mode-active");
+      btn.classList.add("active");
+      makeEditable();
+    } else {
+      container.classList.remove("edit-mode-active");
+      btn.classList.remove("active");
+      makeNonEditable();
+    }
+  }
+
+  function makeEditable() {
+    // Make project titles and descriptions editable
+    document.querySelectorAll(".project-title").forEach(el => {
+      el.contentEditable = true;
+      el.classList.add("editable");
+    });
+    document.querySelectorAll(".project-desc").forEach(el => {
+      el.contentEditable = true;
+      el.classList.add("editable");
+    });
+
+    // Make timeline tasks editable
+    document.querySelectorAll(".timeline-task").forEach(el => {
+      el.contentEditable = true;
+      el.classList.add("editable");
+    });
+    document.querySelectorAll(".timeline-project").forEach(el => {
+      el.contentEditable = true;
+      el.classList.add("editable");
+    });
+
+    // Make team member names editable
+    document.querySelectorAll(".member-name").forEach(el => {
+      el.contentEditable = true;
+      el.classList.add("editable");
+    });
+  }
+
+  function makeNonEditable() {
+    document.querySelectorAll("[contenteditable]").forEach(el => {
+      el.contentEditable = false;
+      el.classList.remove("editable");
+    });
+  }
+</script>
+
+</body>
+</html>

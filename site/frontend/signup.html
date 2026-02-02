@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sign Up</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Only layout fix — does NOT change theme */
+    .grid-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .grid-form input {
+      width: 100%;
+    }
+
+    /* Make single column on small screens */
+    @media (max-width: 600px) {
+      .grid-form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="auth-page">
+
+<a href="index.html" class="back-home">← Back to Home</a>
+
+<div class="center-wrapper">
+  <div class="auth-card">
+    <h1>Create Your Rolebit Account</h1>
+
+    <!-- Two-column grid -->
+    <div class="grid-form">
+      <input id="firstName" placeholder="First Name">
+      <input id="lastName" placeholder="Last Name">
+
+      <input id="email" placeholder="Email">
+      <input id="university" placeholder="University">
+
+      <input id="user" placeholder="Username">
+      <input id="pass" type="password" placeholder="Password">
+    </div>
+
+    <div class="btn-row">
+      <button onclick="signup()">Sign Up</button>
+      <a href="signin.html">
+        <button class="secondary">Back to Sign In</button>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
