@@ -379,6 +379,37 @@
       margin: 0;
     }
 
+    /* Subtle pulse animation for today's date halo */
+    @keyframes subtlePulse {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(100, 200, 255, 0.3);
+      }
+      50% { 
+        box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.1);
+      }
+    }
+
+    .timeline-item.today::before {
+      background: rgba(100, 200, 255, 0.8);
+      animation: subtlePulse 2s infinite;
+      box-shadow: 0 0 0 0 rgba(100, 200, 255, 0.3);
+    }
+
+    /* Green styling for completed/past tasks */
+    .timeline-item.completed::before {
+      background: rgba(100, 255, 100, 0.6);
+      border-color: rgba(20, 21, 26, 1);
+    }
+
+    .timeline-item.completed:hover::before {
+      background: rgba(100, 255, 100, 0.9);
+      box-shadow: 0 0 15px rgba(100, 255, 100, 0.5);
+    }
+
+    .timeline-item.completed .timeline-date {
+      color: rgba(100, 255, 100, 0.8);
+    }
+
     /* ================= EDIT MODE ================= */
     .edit-mode-active .project-card,
     .edit-mode-active .timeline-item,
@@ -542,11 +573,13 @@
   ];
 
   const mockTimeline = [
-    { date: "Feb 10", task: "Design mockups due", project: "Website Redesign", status: "upcoming" },
-    { date: "Feb 15", task: "Client review", project: "Website Redesign", status: "upcoming" },
-    { date: "Feb 20", task: "Backend API ready", project: "API Integration", status: "upcoming" },
-    { date: "Mar 1", task: "Testing phase begins", project: "Mobile App Beta", status: "upcoming" },
-    { date: "Mar 15", task: "Final deployment", project: "Mobile App Beta", status: "upcoming" }
+    { date: "Jan 30", task: "Initial requirements", project: "Website Redesign", status: "completed" },
+    { date: "Feb 1", task: "Research & planning", project: "Website Redesign", status: "completed" },
+    { date: "Feb 3", task: "Design mockups due", project: "Website Redesign", status: "today" },
+    { date: "Feb 10", task: "Client review", project: "Website Redesign", status: "upcoming" },
+    { date: "Feb 15", task: "Backend API ready", project: "API Integration", status: "upcoming" },
+    { date: "Feb 20", task: "Testing phase begins", project: "Mobile App Beta", status: "upcoming" },
+    { date: "Mar 1", task: "Final deployment", project: "Mobile App Beta", status: "upcoming" }
   ];
 
   const mockTeam = [
@@ -578,15 +611,36 @@
   // Render Timeline
   function renderTimeline() {
     const timeline = document.getElementById("timelineList");
-    timeline.innerHTML = mockTimeline.map(item => `
-      <div class="timeline-item ${item.status}">
-        <div class="timeline-date">${item.date}</div>
-        <div class="timeline-content">
-          <div class="timeline-task">${item.task}</div>
-          <div class="timeline-project">in ${item.project}</div>
+    const today = new Date();
+    const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+    const currentDay = String(today.getDate()).padStart(2, '0');
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const todayString = monthNames[today.getMonth()] + " " + today.getDate();
+    
+    timeline.innerHTML = mockTimeline.map(item => {
+      let finalStatus = item.status;
+      
+      // Determine if item is for today or in the past
+      if (item.date.toLowerCase() === todayString.toLowerCase()) {
+        finalStatus = "today";
+      } else {
+        // Parse the date and compare
+        const itemDate = new Date(item.date + ", 2026");
+        if (itemDate < today) {
+          finalStatus = "completed";
+        }
+      }
+      
+      return `
+        <div class="timeline-item ${finalStatus}">
+          <div class="timeline-date">${item.date}</div>
+          <div class="timeline-content">
+            <div class="timeline-task">${item.task}</div>
+            <div class="timeline-project">in ${item.project}</div>
+          </div>
         </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   // Render Team Members
