@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit – Add Project</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Add Project Page Styles */
+    .add-project-container {
+      display: flex;
+      min-height: 100vh;
+      margin-left: 70px;
+      transition: 0.35s ease;
+    }
+
+    .sidebar:hover ~ .add-project-container {
+      margin-left: 220px;
+    }
+
+    .add-project-wrapper {
+      flex: 1;
+      padding: 60px 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .add-project-card {
+      width: 100%;
+      max-width: 600px;
+      background: rgba(40, 40, 45, 0.6);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 40px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 40px rgba(0,0,0,0.4);
+    }
+
+    .add-project-card h1 {
+      font-size: 2rem;
+      margin-bottom: 30px;
+      text-align: center;
+      background: linear-gradient(135deg, #ffffff, rgba(255,255,255,0.7));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(60, 60, 65, 0.6);
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+      color: rgba(255,255,255,0.4);
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      background: rgba(70, 70, 75, 0.8);
+      border-color: rgba(100, 200, 255, 0.4);
+      box-shadow: 0 0 12px rgba(100, 200, 255, 0.2);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .team-members-select {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .team-member-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(60, 60, 65, 0.4);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .team-member-option:hover {
+      background: rgba(70, 70, 75, 0.6);
+    }
+
+    .team-member-option input[type="checkbox"] {
+      width: auto;
+      cursor: pointer;
+      accent-color: rgba(100, 200, 255, 0.8);
+    }
+
+    .team-member-option label {
+      flex: 1;
+      margin: 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .btn-submit {
+      flex: 1;
+      padding: 12px;
+      background: rgba(100, 200, 255, 0.25);
+      border: 1px solid rgba(100, 200, 255, 0.4);
+      color: rgba(100, 200, 255, 0.95);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-submit:hover {
+      background: rgba(100, 200, 255, 0.35);
+      border-color: rgba(100, 200, 255, 0.6);
+      box-shadow: 0 0 12px rgba(100, 200, 255, 0.3);
+    }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.85);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-cancel:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .back-link {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: #ddd;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+
+    .back-link:hover {
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .add-project-wrapper {
+        padding: 40px 20px;
+      }
+
+      .add-project-card {
+        padding: 30px 20px;
+      }
+
+      .team-members-select {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+  <a href="dashboard.html">Dashboard</a>
+  <a href="index.html">Home</a>
+  
+  <div class="signin-logo">
+    <a href="#" onclick="logout(); return false;" title="Logout">🚪</a>
+  </div>
+</div>
+
+<a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+
+<div class="add-project-container">
+  <div class="add-project-wrapper">
+    <div class="add-project-card">
+      <h1>Create New Project</h1>
+      
+      <form id="projectForm" onsubmit="addProject(event)">
+        <div class="form-group">
+          <label for="projectName">Project Name *</label>
+          <input type="text" id="projectName" placeholder="Enter project name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="projectDesc">Description *</label>
+          <textarea id="projectDesc" placeholder="Enter project description" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="startDate">Start Date *</label>
+          <input type="date" id="startDate" required>
+        </div>
+
+        <div class="form-group">
+          <label>Team Members (Select who will work on this)</label>
+          <div class="team-members-select" id="teamMembersSelect">
+            <!-- Team members will load here -->
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">✓ Create Project</button>
+          <button type="button" class="btn-cancel" onclick="location.href='dashboard.html'">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Team Members Sidebar -->
+<aside class="team-sidebar" id="teamSidebar">
+  <h3>Team Members</h3>
+  <div class="team-list" id="teamList">
+    <!-- Team members will load here -->
+  </div>
+</aside>
+
+<script src="script.js"></script>
+<script>
+  // Check if user is logged in
+  const user = localStorage.getItem("rolebit_user");
+  if (!user) {
+    window.location.href = "signin.html";
+  }
+
+  // Mock team data
+  const mockTeam = [
+    { name: "Alex Chen", role: "Product Lead" },
+    { name: "Jordan Lee", role: "Designer" },
+    { name: "Sam Parker", role: "Developer" },
+    { name: "Casey Brown", role: "QA Engineer" },
+    { name: "Morgan Davis", role: "DevOps" }
+  ];
+
+  // Render team members for selection
+  function renderTeamMembers() {
+    const container = document.getElementById("teamMembersSelect");
+    container.innerHTML = mockTeam.map((member, i) => `
+      <div class="team-member-option">
+        <input type="checkbox" id="member-${i}" value="${member.name}">
+        <label for="member-${i}">${member.name}</label>
+      </div>
+    `).join("");
+  }
+
+  // Handle form submission
+  function addProject(e) {
+    e.preventDefault();
+
+    const name = document.getElementById("projectName").value;
+    const desc = document.getElementById("projectDesc").value;
+    const date = document.getElementById("startDate").value;
+    
+    const selectedMembers = Array.from(document.querySelectorAll(".team-member-option input:checked"))
+      .map(el => el.value);
+
+    if (!name || !desc || !date) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Success message
+    alert(`Project "${name}" created successfully!\nStart Date: ${date}\nTeam: ${selectedMembers.length > 0 ? selectedMembers.join(", ") : "No team assigned yet"}`);
+    
+    // Redirect back to dashboard
+    setTimeout(() => {
+      window.location.href = "dashboard.html";
+    }, 500);
+  }
+
+  // Render team members and sidebar
+  renderTeamMembers();
+  
+  // Render sidebar team members
+  function renderSidebarTeam() {
+    const teamList = document.getElementById("teamList");
+    teamList.innerHTML = mockTeam.map((member, i) => {
+      const initials = member.name.split(" ").map(n => n[0]).join("");
+      return `
+        <div class="team-member">
+          <div class="member-avatar">${initials}</div>
+          <div>
+            <div class="member-name">${member.name}</div>
+            <div class="member-role">${member.role}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  renderSidebarTeam();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,228 @@
+const API = "http://localhost:3000";
+
+const ADMIN_PASSWORD = "meow1010";
+
+/* ---------- ADMIN FUNCTIONS ---------- */
+
+function toggleAdminInput() {
+  const wrapper = document.getElementById("adminWrapper");
+  if (wrapper) {
+    wrapper.classList.toggle("show");
+    if (wrapper.classList.contains("show")) {
+      document.getElementById("adminPassword").focus();
+    }
+  }
+}
+
+function submitAdminPassword() {
+  const password = document.getElementById("adminPassword").value;
+  const statusEl = document.getElementById("adminStatus");
+  
+  if (password === ADMIN_PASSWORD) {
+    localStorage.setItem("rolebit_admin", "true");
+    statusEl.innerText = "✓ Unlocked";
+    statusEl.classList.add("active");
+    statusEl.classList.remove("error");
+    
+    // Redirect to dashboard if not already there
+    if (!location.pathname.includes("dashboard")) {
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 500);
+    }
+  } else {
+    statusEl.innerText = "✗ Wrong password";
+    statusEl.classList.add("error");
+    statusEl.classList.remove("active");
+    document.getElementById("adminPassword").value = "";
+  }
+}
+
+function isAdmin() {
+  return localStorage.getItem("rolebit_admin") === "true";
+}
+
+/* ---------- AUTH ---------- */
+
+function showSuccessNotification(message) {
+  let notification = document.getElementById("successNotification");
+  
+  if (!notification) {
+    notification = document.createElement("div");
+    notification.id = "successNotification";
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(76, 175, 80, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      z-index: 9999;
+      animation: slideIn 0.4s ease-out;
+    `;
+    document.body.appendChild(notification);
+    
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      @keyframes slideOut {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  notification.textContent = message;
+  notification.style.animation = "slideIn 0.4s ease-out";
+  
+  setTimeout(() => {
+    notification.style.animation = "slideOut 0.4s ease-out";
+    setTimeout(() => {
+      notification.style.display = "none";
+    }, 400);
+  }, 3000);
+}
+
+async function signup() {
+  const username = document.getElementById("user")?.value || "";
+  const password = document.getElementById("pass")?.value || "";
+
+  // New fields (optional, won't break old behavior)
+  const email = document.getElementById("email")?.value || "";
+  const firstName = document.getElementById("firstName")?.value || "";
+  const lastName = document.getElementById("lastName")?.value || "";
+  const university = document.getElementById("university")?.value || "";
+
+  if (!username || !password) {
+    alert("Username and password are required");
+    return;
+  }
+
+  try {
+    const res = await fetch(API + "/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        password,
+        email,
+        firstName,
+        lastName,
+        university
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+    } else {
+      showSuccessNotification("✓ Account created successfully!");
+      setTimeout(() => {
+        window.location.href = "signin.html";
+      }, 2000);
+    }
+  } catch (error) {
+    alert("Error: Server not running or connection failed");
+  }
+}
+
+function login() {
+  const username = document.getElementById("loginUser").value;
+  const password = document.getElementById("loginPass").value;
+  const adminPass = document.getElementById("adminPass").value;
+
+  if (!username || !password) {
+    alert("Username and password are required");
+    return;
+  }
+
+  try {
+    fetch(API + "/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        localStorage.setItem("rolebit_user", data.username);  // MATCH HOME PAGE
+        
+        // Check if admin password is correct
+        if (adminPass === ADMIN_PASSWORD) {
+          localStorage.setItem("rolebit_admin", "true");
+          window.location.href = "dashboard.html";
+        } else {
+          window.location.href = "coming-soon.html";
+        }
+      } else {
+        alert("Invalid login");
+      }
+    })
+    .catch(() => alert("Server not running"));
+  } catch (error) {
+    alert("Connection error");
+  }
+}
+
+
+function loadUser() {
+  const u = localStorage.getItem("rolebit_user");
+
+  if (u) {
+    const w = document.getElementById("welcome");
+    const l = document.getElementById("logoutBtn");
+    if (w) w.innerText = "Welcome, " + u;
+    if (l) l.style.display = "inline";
+  }
+
+  const protectedPages = ["dashboard", "projects"];
+  const isProtected = protectedPages.some(p => location.pathname.includes(p));
+
+  if (!u && isProtected) {
+    window.location.href = "signin.html";
+  }
+}
+
+function logout() {
+  localStorage.removeItem("rolebit_user");
+  localStorage.removeItem("rolebit_admin");
+  window.location.href = "signin.html";
+}
+
+function goWaitlist() {
+  window.location.href = "waitlist.html";
+}
+
+/* ---------- YOUR EXISTING ANIMATIONS ---------- */
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = "running";
+    }
+  });
+});
+document.querySelectorAll(".card").forEach(card => observer.observe(card));
+
+/* ---------- AUTO LOAD ---------- */
+loadUser();

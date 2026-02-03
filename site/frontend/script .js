@@ -75,6 +75,7 @@ async function signup() {
 function login() {
   const username = document.getElementById("loginUser").value;
   const password = document.getElementById("loginPass").value;
+  const adminPass = document.getElementById("adminPass").value;
 
   fetch("http://localhost:3000/login", {
     method: "POST",
@@ -85,7 +86,14 @@ function login() {
   .then(data => {
     if (data.success) {
   localStorage.setItem("rolebit_user", data.username);  // MATCH HOME PAGE
-  window.location.href = "coming-soon.html";
+  
+  // Check if admin password is correct
+  if (adminPass === ADMIN_PASSWORD) {
+    localStorage.setItem("rolebit_admin", "true");
+    window.location.href = "dashboard.html";
+  } else {
+    window.location.href = "coming-soon.html";
+  }
 }
  else {
       alert("Invalid login");
