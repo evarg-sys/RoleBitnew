@@ -13,6 +13,7 @@
       padding: 40px 60px;
       min-height: 100vh;
       transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+      
     }
 
     .sidebar:hover ~ .dashboard-container {
@@ -500,11 +501,20 @@
 <div class="dashboard-container">
   <div class="dashboard-main">
     <div class="dashboard-header">
-      <h1>Dashboard</h1>
-      <div class="header-actions">
-        <button id="editModeBtn" class="edit-btn" onclick="toggleEditMode()" style="display:none;">✏️ Edit Mode</button>
-        <button onclick="logout()" class="logout-btn">Logout</button>
-      </div>
+      <section class="dashboard-hero">
+  <div class="hero-left">
+    <div class="hero-greeting" id="heroGreeting">
+      Good Morning, Eric
+    </div>
+    <div class="hero-next-task" id="heroTask">
+      Design mockups due
+    </div>
+    <div class="hero-project" id="heroProject">
+      in Website Redesign
+    </div>
+    <div class="hero-motivational" id="heroMotivational"></div>
+  </div>
+</section>
     </div>
 
     <!-- Projects Section -->
@@ -527,6 +537,9 @@
     </section>
   </div>
 
+  <!-- Logout Button -->
+  <button class="top-right-logout-btn" onclick="logout(); return false;" title="Logout">🚪 Logout</button>
+
   <!-- Team Members Sidebar -->
   <aside class="team-sidebar" id="teamSidebar">
     <h3>Team Members</h3>
@@ -534,6 +547,7 @@
       <!-- Team members will load here -->
     </div>
   </aside>
+  
 </div>
 
 <script src="script.js"></script>
@@ -589,6 +603,24 @@
     { name: "Casey Brown", role: "QA Engineer" },
     { name: "Morgan Davis", role: "DevOps" }
   ];
+
+  // Display random motivational message
+  function displayMotivationalMessage() {
+    const messages = [
+      "Keep pushing forward! You're doing great.",
+      "Every small progress is a big deal. 🚀",
+      "You've got this! Let's make it happen.",
+      "Your focus brings results. Stay on track.",
+      "Progress over perfection. Let's keep going!",
+      "Great things take time. You're on your way.",
+      "One step at a time. You're crushing it! 💪",
+      "Stay focused, stay positive, stay productive.",
+      "The best time to start is now!",
+      "Your dedication will pay off soon. 🎯"
+    ];
+    const randomIdx = Math.floor(Math.random() * messages.length);
+    document.getElementById("heroMotivational").textContent = messages[randomIdx];
+  }
 
   // Render Projects
   function renderProjects() {
@@ -664,6 +696,7 @@
   renderProjects();
   renderTimeline();
   renderTeam();
+  displayMotivationalMessage();
 
   // Check if admin and show edit button
   if (isAdmin()) {

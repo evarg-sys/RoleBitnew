@@ -141,5 +141,44 @@ const observer = new IntersectionObserver(entries => {
 });
 document.querySelectorAll(".card").forEach(card => observer.observe(card));
 
+function renderHeroSection() {
+  const greetingEl = document.getElementById("heroGreeting");
+  const taskEl = document.getElementById("heroTask");
+  const projectEl = document.getElementById("heroProject");
+  const ring = document.getElementById("heroProgressRing");
+  const percentText = document.getElementById("heroProgressText");
+
+  const user = localStorage.getItem("rolebit_user") || "User";
+
+  const hour = new Date().getHours();
+  let greeting;
+
+  if (hour < 12) greeting = "Good Morning";
+  else if (hour < 18) greeting = "Good Afternoon";
+  else greeting = "Good Evening";
+
+  greetingEl.innerText = `${greeting}, ${user}`;
+
+  const nextTask = mockTimeline.find(t => t.status === "today" || t.status === "upcoming");
+
+  if (nextTask) {
+    taskEl.innerText = nextTask.task;
+    projectEl.innerText = "in " + nextTask.project;
+  }
+
+  const completed = mockTimeline.filter(t => t.status === "completed").length;
+  const percent = Math.round((completed / mockTimeline.length) * 100);
+
+  percentText.innerText = percent + "%";
+
+  const circumference = 201;
+  const offset = circumference - (percent / 100) * circumference;
+  ring.style.strokeDashoffset = offset;
+}
+
+renderHeroSection();
+
+renderNextTask();
+
 /* ---------- AUTO LOAD ---------- */
 loadUser();
