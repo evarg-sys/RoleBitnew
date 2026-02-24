@@ -11,11 +11,31 @@
   <a href="index.html">Home</a>
   <a href="about.html">About Us</a>
   <a href="why.html">Why Us</a>
+  <a href="dashboard.html" id="dashboardTab" style="display:none">Dashboard</a>
   
   <div class="signin-logo">
     <a href="signin.html" title="Sign In">🔑</a>
   </div>
 </div>
+
+<script>
+  // Show dashboard tab if user is logged in as admin
+  function updateSidebarForAdmin() {
+    const isLoggedIn = localStorage.getItem('rolebit_user');
+    const isAdmin = localStorage.getItem('rolebit_admin');
+    const dashboardTab = document.getElementById('dashboardTab');
+    
+    if (isLoggedIn && isAdmin === 'true') {
+      dashboardTab.style.display = 'block';
+    }
+  }
+  
+  // Check on page load
+  updateSidebarForAdmin();
+  
+  // Also check periodically in case admin status changes
+  window.addEventListener('storage', updateSidebarForAdmin);
+</script>
 
 
 <div class="main hero">
