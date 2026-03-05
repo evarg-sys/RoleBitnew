@@ -104,13 +104,16 @@
       gap: 20px;
     }
 
-    /* Widget Grid - Masonry style */
+    /* Widget Grid - layout handled in external stylesheet, using flex wrap for proper wrapping */
+    /*
     .widgets-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 20px;
       auto-rows: 250px;
     }
+    */
+    /* leave defaults to style.css which defines a flexbox-based wrapping grid */
 
     .widget {
       background: rgba(40, 50, 80, 0.6);
@@ -735,6 +738,8 @@
         padding: 20px;
       }
 
+      /* let flexbox handle stacking on narrow screens rather than forcing grid columns */
+      /*
       .projects-grid,
       .widgets-grid {
         grid-template-columns: 1fr;
@@ -753,6 +758,8 @@
         auto-rows: auto;
         min-height: 200px;
       }
+      */
+      /* widgets and projects will shrink naturally via flex rules */
 
       .dashboard-header {
         flex-direction: column;

@@ -176,7 +176,7 @@ function renderHeroSection() {
   ring.style.strokeDashoffset = offset;
 }
 
-renderHeroSection();
+renderHeroSection(); 
 
 renderNextTask();
 

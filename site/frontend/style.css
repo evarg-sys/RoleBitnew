@@ -285,9 +285,10 @@ body {
 }
 
 @media (max-width: 480px) {
+  /* keep using flexbox wrapping on very narrow screens; remove grid override */
   .widgets-grid {
-    grid-template-columns: 1fr;
-    auto-rows: auto;
+    gap: 14px;
+    /* flex-wrap and alignment already defined globally */
     min-height: 180px;
   }
 
@@ -298,8 +299,7 @@ body {
   .widget.size-large,
   .widget.size-wide,
   .widget.size-tall {
-    grid-column: span 1;
-    grid-row: span 1;
+    /* no special grid spans needed under flex layout */
   }
 }
 
