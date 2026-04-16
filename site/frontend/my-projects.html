@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - My Projects</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .projects-page {
+      margin-left: 70px;
+      min-height: 100vh;
+      padding: 36px 48px;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .projects-page {
+      margin-left: 220px;
+    }
+
+    .projects-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .projects-header h1 {
+      font-size: 2rem;
+      color: rgba(255, 255, 255, 0.96);
+      margin: 0;
+    }
+
+    .projects-subtitle {
+      color: rgba(200, 220, 255, 0.78);
+      font-size: 0.95rem;
+    }
+
+    .projects-layout {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(31, 40, 67, 0.75);
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      border-radius: 16px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 1.2rem;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .project-card {
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(10, 17, 34, 0.78);
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .project-card:hover {
+      border-color: rgba(100, 200, 255, 0.45);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .project-card.active {
+      border-color: rgba(120, 220, 255, 0.8);
+      box-shadow: 0 0 0 1px rgba(120, 220, 255, 0.4) inset;
+      background: rgba(16, 26, 50, 0.92);
+    }
+
+    .project-name {
+      font-weight: 700;
+      color: white;
+      margin-bottom: 6px;
+    }
+
+    .project-meta {
+      color: rgba(205, 225, 255, 0.75);
+      font-size: 0.84rem;
+      margin-bottom: 8px;
+    }
+
+    .progress-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #64c8ff, #42f0a1);
+      border-radius: 999px;
+    }
+
+    .next-list,
+    .detail-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .next-item,
+    .detail-item {
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 10px;
+      background: rgba(7, 13, 27, 0.65);
+      padding: 10px;
+      color: rgba(225, 238, 255, 0.9);
+      font-size: 0.9rem;
+    }
+
+    .detail-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: white;
+    }
+
+    .detail-copy {
+      color: rgba(216, 232, 255, 0.82);
+      margin: 0 0 10px;
+      line-height: 1.45;
+    }
+
+    .detail-mini {
+      color: rgba(170, 203, 241, 0.85);
+      font-size: 0.86rem;
+      margin-bottom: 8px;
+    }
+
+    .top-right-logout-btn {
+      position: fixed;
+      right: 22px;
+      top: 22px;
+    }
+
+    @media (max-width: 1100px) {
+      .projects-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .projects-page {
+        margin-left: 70px;
+        padding: 22px;
+      }
+
+      .projects-header h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="sidebar">
+  <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+  <a href="dashboard.html">Dashboard</a>
+  <a href="my-projects.html">My Projects</a>
+  <a href="index.html">Home</a>
+
+  <div class="signin-logo">
+    <a href="#" onclick="logout(); return false;" title="Logout">L</a>
+  </div>
+</div>
+
+<div class="projects-page">
+  <header class="projects-header">
+    <div>
+      <h1>My Projects</h1>
+      <div class="projects-subtitle" id="projectsSubtitle">Active projects and what is next.</div>
+    </div>
+  </header>
+
+  <div class="projects-layout">
+    <section class="panel">
+      <h2>Active Projects</h2>
+      <div class="projects-grid" id="activeProjectsGrid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Project Details</h2>
+      <div id="projectDetails"></div>
+    </section>
+
+    <section class="panel" style="grid-column: 1 / -1;">
+      <h2>What Is Next</h2>
+      <div class="next-list" id="nextList"></div>
+    </section>
+  </div>
+</div>
+
+<button class="top-right-logout-btn" onclick="logout(); return false;" title="Logout">Logout</button>
+
+<script src="script.js"></script>
+<script>
+  const user = localStorage.getItem("rolebit_user");
+  if (!user) {
+    window.location.href = "signin.html";
+  }
+
+  const projects = [
+    {
+      id: "p1",
+      name: "Website Redesign",
+      owner: "Design Team",
+      progress: 68,
+      status: "In Progress",
+      deadline: "Mar 18, 2026",
+      summary: "Rebuild the landing and onboarding experience with improved conversion-focused sections.",
+      next: ["Finalize hero interaction", "Approve mobile QA", "Publish v2 content"],
+      info: ["Team: 5 people", "Priority: High", "Budget: On track"]
+    },
+    {
+      id: "p2",
+      name: "API Integration",
+      owner: "Backend Team",
+      progress: 42,
+      status: "In Progress",
+      deadline: "Mar 24, 2026",
+      summary: "Connect billing, analytics, and user event pipelines into a single service layer.",
+      next: ["Finish payment webhook", "Audit API logs", "Run staging tests"],
+      info: ["Team: 3 people", "Priority: Medium", "Risk: Payment retries"]
+    },
+    {
+      id: "p3",
+      name: "Mobile Beta",
+      owner: "Product Team",
+      progress: 55,
+      status: "In Review",
+      deadline: "Apr 4, 2026",
+      summary: "Prepare iOS and Android beta candidate with key dashboard and project workflows.",
+      next: ["Close top 5 QA bugs", "Push beta release notes", "Invite first cohort"],
+      info: ["Team: 6 people", "Priority: High", "Scope: MVP features"]
+    }
+  ];
+
+  let selectedProjectId = projects[0].id;
+
+  function renderActiveProjects() {
+    const grid = document.getElementById("activeProjectsGrid");
+    grid.innerHTML = projects.map((project) => {
+      const isActive = project.id === selectedProjectId ? "active" : "";
+      return `
+        <article class="project-card ${isActive}" data-project-id="${project.id}">
+          <div class="project-name">${project.name}</div>
+          <div class="project-meta">${project.owner} | ${project.status} | Due ${project.deadline}</div>
+          <div class="progress-track"><div class="progress-fill" style="width: ${project.progress}%;"></div></div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function renderProjectDetails() {
+    const project = projects.find((item) => item.id === selectedProjectId) || projects[0];
+    const details = document.getElementById("projectDetails");
+    details.innerHTML = `
+      <h3 class="detail-title">${project.name}</h3>
+      <p class="detail-copy">${project.summary}</p>
+      <div class="detail-mini">Status: ${project.status}</div>
+      <div class="detail-mini">Due: ${project.deadline}</div>
+      <div class="detail-list">
+        ${project.info.map((line) => `<div class="detail-item">${line}</div>`).join("")}
+      </div>
+    `;
+  }
+
+  function renderNextList() {
+    const nextList = document.getElementById("nextList");
+    const items = projects.flatMap((project) =>
+      project.next.map((step) => ({ label: `${project.name}: ${step}`, deadline: project.deadline }))
+    );
+    nextList.innerHTML = items.map((item) => `<div class="next-item">${item.label} (target: ${item.deadline})</div>`).join("");
+  }
+
+  document.addEventListener("click", (event) => {
+    const card = event.target.closest(".project-card[data-project-id]");
+    if (!card) return;
+    selectedProjectId = card.dataset.projectId;
+    renderActiveProjects();
+    renderProjectDetails();
+  });
+
+  document.getElementById("projectsSubtitle").textContent = `Good Morning, ${user}. Active projects and what is next.`;
+
+  renderActiveProjects();
+  renderProjectDetails();
+  renderNextList();
+</script>
+</body>
+</html>

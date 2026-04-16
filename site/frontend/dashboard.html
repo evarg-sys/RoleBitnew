@@ -961,6 +961,7 @@
 <div class="sidebar">
   <img src="logo.png" class="logo-img" alt="Rolebit Logo">
   <a href="dashboard.html">Dashboard</a>
+  <a href="my-projects.html">My Projects</a>
   <a href="index.html">Home</a>
 
   <div class="signin-logo">
@@ -1683,15 +1684,10 @@
   }
 
   function updateGreeting() {
-    const hour = new Date().getHours();
-    let greeting = "Good Evening";
-    if (hour < 12) greeting = "Good Morning";
-    else if (hour < 18) greeting = "Good Afternoon";
-
     const nameEl = document.getElementById("heroName");
     const prefixEl = document.querySelector(".hero-greeting-prefix");
     if (nameEl) nameEl.textContent = user || "User";
-    if (prefixEl) prefixEl.textContent = `${greeting}, `;
+    if (prefixEl) prefixEl.textContent = "Good Morning, ";
   }
 
   document.getElementById("addWidgetBtn")?.addEventListener("click", () => {
