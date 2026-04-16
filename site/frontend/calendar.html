@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Calendar</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    :root {
+      --txt: #f6fbff;
+      --muted: rgba(208, 228, 244, 0.78);
+      --shell: rgba(18, 29, 49, 0.84);
+      --line: rgba(118, 216, 255, 0.28);
+      --card: rgba(8, 17, 31, 0.84);
+      --ok: #49e6a9;
+      --accent: #76d9ff;
+      --warn: #ffc26b;
+    }
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: var(--line);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 30px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+      background: transparent;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--shell);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--txt);
+      margin: 0;
+    }
+
+    .hero-copy {
+      margin-top: 10px;
+      color: var(--muted);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .calendar-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0 12px;
+      flex-wrap: wrap;
+    }
+
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .weekday {
+      text-align: center;
+      font-size: 0.76rem;
+      color: var(--muted);
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .calendar-cell,
+    .calendar-empty {
+      min-height: 64px;
+      border-radius: 10px;
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      background: rgba(10, 18, 33, 0.86);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+      padding: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+      color: var(--txt);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.82rem;
+    }
+
+    .calendar-cell:hover {
+      border-color: rgba(118, 216, 255, 0.58);
+      transform: translateY(-1px);
+    }
+
+    .calendar-cell.today {
+      border-color: rgba(118, 216, 255, 0.72);
+      box-shadow: 0 0 0 1px rgba(118, 216, 255, 0.24) inset;
+      font-weight: 700;
+    }
+
+    .calendar-cell.selected {
+      border-color: rgba(73, 230, 169, 0.82);
+      box-shadow: 0 0 0 1px rgba(73, 230, 169, 0.3) inset;
+    }
+
+    .calendar-cell.has-due::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--warn);
+      margin-top: auto;
+    }
+
+    .calendar-empty {
+      background: transparent;
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+      cursor: default;
+    }
+
+    button,
+    select,
+    input,
+    .nav-btn {
+      border: 1px solid rgba(118, 216, 255, 0.35);
+      background: rgba(13, 23, 42, 0.92);
+      color: var(--txt);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.88rem;
+    }
+
+    .side-heading {
+      margin-bottom: 8px;
+      font-size: 1.2rem;
+    }
+
+    .selected-copy {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .due-form {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .due-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .due-item {
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      border-radius: 12px;
+      background: var(--card);
+      padding: 10px;
+      color: var(--txt);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.88rem;
+    }
+
+    .due-item.done {
+      border-color: rgba(73, 230, 169, 0.52);
+      opacity: 0.75;
+    }
+
+    .due-item.done .due-title {
+      text-decoration: line-through;
+    }
+
+    .due-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .due-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      border: 1px solid rgba(118, 216, 255, 0.3);
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: rgba(12, 23, 42, 0.88);
+    }
+
+    .due-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .mini-btn {
+      padding: 6px 8px;
+      font-size: 0.74rem;
+      cursor: pointer;
+    }
+
+    .empty {
+      border: 1px dashed rgba(118, 216, 255, 0.3);
+      border-radius: 12px;
+      padding: 14px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(10, 17, 33, 0.6);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.86rem;
+    }
+
+    .nav-row {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1200px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page-wrap {
+        padding: 16px;
+      }
+
+      .calendar-cell,
+      .calendar-empty {
+        min-height: 56px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <main class="page-wrap">
+    <div class="layout">
+      <section class="panel">
+        <h1>Calendar Planner</h1>
+        <p class="hero-copy" id="heroCopy"></p>
+        <div class="calendar-top">
+          <button type="button" id="prevBtn">Prev</button>
+          <h2 id="monthTitle"></h2>
+          <button type="button" id="nextBtn">Next</button>
+        </div>
+        <div class="weekdays">
+          <div class="weekday">Sun</div>
+          <div class="weekday">Mon</div>
+          <div class="weekday">Tue</div>
+          <div class="weekday">Wed</div>
+          <div class="weekday">Thu</div>
+          <div class="weekday">Fri</div>
+          <div class="weekday">Sat</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </section>
+
+      <section class="panel">
+        <h2 class="side-heading">Selected Day</h2>
+        <div class="selected-copy" id="selectedDateText">Pick a date to see what is due.</div>
+        <div class="due-form">
+          <input id="dueTitleInput" type="text" placeholder="Add due item">
+          <input id="dueProjectInput" type="text" placeholder="Project or area">
+          <div style="display:flex; gap:8px;">
+            <select id="dueStatusInput" style="flex:1;">
+              <option value="pending">Pending</option>
+              <option value="in-progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+            <button id="addDueBtn" type="button">Add</button>
+          </div>
+        </div>
+        <div class="due-list" id="dueList"></div>
+        <div class="nav-row">
+          <button class="nav-btn" type="button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const user = localStorage.getItem("rolebit_user");
+    if (!user) window.location.href = "signin.html";
+
+    const API = "http://localhost:3000";
+    const KEY = "rolebit_calendar_due_items";
+    let monthOffset = 0;
+    let selectedDate = new Date().toISOString().slice(0, 10);
+    let projectDueByDate = {};
+
+    const dueByDate = JSON.parse(localStorage.getItem(KEY) || "{}");
+    if (!Object.keys(dueByDate).length) {
+      const today = new Date().toISOString().slice(0, 10);
+      dueByDate[today] = [
+        { title: "Prepare standup notes", project: "RoleBit", status: "in-progress" },
+        { title: "Review homepage polish", project: "Frontend", status: "pending" }
+      ];
+    }
+
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(dueByDate));
+    }
+
+    function toIsoDate(rawDue) {
+      const value = String(rawDue || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+      return "";
+    }
+
+    async function loadProjectDueItems() {
+      projectDueByDate = {};
+      try {
+        const response = await fetch(`${API}/projects?username=${encodeURIComponent(user)}`);
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        const projects = Array.isArray(data.projects) ? data.projects : [];
+
+        projects.forEach((project) => {
+          const timeline = Array.isArray(project.timeline) ? project.timeline : [];
+          timeline.forEach((item) => {
+            const dueIso = toIsoDate(item.due);
+            if (!dueIso || !item.task) return;
+
+            projectDueByDate[dueIso] = projectDueByDate[dueIso] || [];
+            projectDueByDate[dueIso].push({
+              title: item.task,
+              project: project.title || "Project",
+              status: item.completed ? "done" : "in-progress",
+              assignee: item.owner || "Unassigned",
+              source: "project"
+            });
+          });
+        });
+      } catch (_err) {
+        projectDueByDate = {};
+      }
+    }
+
+    function formatDateLabel(iso) {
+      const date = new Date(iso + "T00:00:00");
+      return date.toLocaleDateString("default", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    }
+
+    function renderDueList() {
+      const dueList = document.getElementById("dueList");
+      const selectedItems = dueByDate[selectedDate] || [];
+      const syncedItems = projectDueByDate[selectedDate] || [];
+      const allCount = selectedItems.length + syncedItems.length;
+      document.getElementById("selectedDateText").textContent = `Due items for ${formatDateLabel(selectedDate)}`;
+
+      if (!allCount) {
+        dueList.innerHTML = '<div class="empty">No due items for this date yet.</div>';
+        return;
+      }
+
+      const localHtml = selectedItems.map((item, index) => `
+        <article class="due-item ${item.status === "done" ? "done" : ""}">
+          <div class="due-title">${item.title}</div>
+          <div class="due-meta">
+            <span class="pill">${item.project}</span>
+            <span class="pill">${item.status}</span>
+          </div>
+          <div class="due-actions">
+            <button class="mini-btn" data-action="toggle-done" data-index="${index}" type="button">${item.status === "done" ? "Mark Pending" : "Mark Done"}</button>
+            <button class="mini-btn" data-action="remove-due" data-index="${index}" type="button">Remove</button>
+          </div>
+        </article>
+      `).join("");
+
+      const syncedHtml = syncedItems.map((item) => `
+        <article class="due-item ${item.status === "done" ? "done" : ""}">
+          <div class="due-title">${item.title}</div>
+          <div class="due-meta">
+            <span class="pill">${item.project}</span>
+            <span class="pill">${item.status}</span>
+            <span class="pill">Assigned: ${item.assignee}</span>
+            <span class="pill">Synced from timeline</span>
+          </div>
+        </article>
+      `).join("");
+
+      dueList.innerHTML = `${localHtml}${syncedHtml}`;
+    }
+
+    function renderCalendar() {
+      const now = new Date();
+      const current = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+      const year = current.getFullYear();
+      const month = current.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const leading = current.getDay();
+
+      document.getElementById("monthTitle").textContent = current.toLocaleString("default", { month: "long", year: "numeric" });
+      document.getElementById("heroCopy").textContent = `Hi ${user}, pick a date to check what is due and keep delivery smooth.`;
+
+      const grid = document.getElementById("calendarGrid");
+      const cells = [];
+      for (let i = 0; i < leading; i += 1) {
+        cells.push('<div class="calendar-empty"></div>');
+      }
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const isToday = now.getFullYear() === year && now.getMonth() === month && now.getDate() === day;
+        const hasLocalDue = Array.isArray(dueByDate[isoDate]) && dueByDate[isoDate].length;
+        const hasSyncedDue = Array.isArray(projectDueByDate[isoDate]) && projectDueByDate[isoDate].length;
+        const hasDue = hasLocalDue || hasSyncedDue;
+        const isSelected = isoDate === selectedDate;
+        const classes = ["calendar-cell"];
+        if (isToday) classes.push("today");
+        if (hasDue) classes.push("has-due");
+        if (isSelected) classes.push("selected");
+        cells.push(`<button class="${classes.join(" ")}" data-date="${isoDate}" type="button">${day}</button>`);
+      }
+      grid.innerHTML = cells.join("");
+    }
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      monthOffset -= 1;
+      renderCalendar();
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      monthOffset += 1;
+      renderCalendar();
+    });
+
+    document.getElementById("addDueBtn").addEventListener("click", () => {
+      const title = document.getElementById("dueTitleInput").value.trim();
+      const project = document.getElementById("dueProjectInput").value.trim() || "General";
+      const status = document.getElementById("dueStatusInput").value || "pending";
+      if (!title) return;
+
+      dueByDate[selectedDate] = dueByDate[selectedDate] || [];
+      dueByDate[selectedDate].push({ title, project, status });
+      document.getElementById("dueTitleInput").value = "";
+      document.getElementById("dueProjectInput").value = "";
+      save();
+      renderCalendar();
+      renderDueList();
+    });
+
+    document.addEventListener("click", (event) => {
+      const dateBtn = event.target.closest(".calendar-cell[data-date]");
+      if (dateBtn) {
+        selectedDate = dateBtn.dataset.date;
+        renderCalendar();
+        renderDueList();
+        return;
+      }
+
+      const actionEl = event.target.closest("[data-action]");
+      if (!actionEl) return;
+
+      const list = dueByDate[selectedDate] || [];
+      const index = Number(actionEl.dataset.index || -1);
+      if (index < 0 || !list[index]) return;
+
+      if (actionEl.dataset.action === "toggle-done") {
+        list[index].status = list[index].status === "done" ? "pending" : "done";
+      }
+
+      if (actionEl.dataset.action === "remove-due") {
+        list.splice(index, 1);
+      }
+
+      if (!list.length) {
+        delete dueByDate[selectedDate];
+      }
+
+      save();
+      renderCalendar();
+      renderDueList();
+    });
+
+    loadProjectDueItems().finally(() => {
+      renderCalendar();
+      renderDueList();
+    });
+  </script>
+</body>
+</html>

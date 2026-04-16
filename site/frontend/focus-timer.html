@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Focus Timer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    :root {
+      --txt: #f4fbff;
+      --muted: rgba(209, 229, 243, 0.78);
+      --shell: rgba(16, 30, 44, 0.84);
+      --line: rgba(124, 214, 255, 0.26);
+      --accent: #74d8ff;
+      --calm: #74dba3;
+    }
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: var(--line);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 30px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+      display: grid;
+      place-items: center;
+      background: transparent;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .panel {
+      width: min(1100px, 96vw);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 18px 12px;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--txt);
+      text-align: center;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 18px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .focus-state {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin: 8px 0 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .timer-display {
+      font-size: clamp(3.8rem, 11vw, 7rem);
+      color: rgba(198, 209, 220, 0.98);
+      font-weight: 800;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-family: 'Space Grotesk', sans-serif;
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      margin-bottom: 14px;
+      text-shadow: none;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 8px 0 18px;
+    }
+
+    .mode-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 10px 26px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mode-btn.active {
+      background: rgba(67, 118, 170, 0.54);
+      color: rgba(238, 248, 255, 0.98);
+      border-color: rgba(141, 217, 255, 0.72);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .controls input,
+    .controls button,
+    .preset-btn,
+    .nav-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 9px 10px;
+      font-size: 0.98rem;
+    }
+
+    .controls button,
+    .preset-btn,
+    .nav-btn {
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: rgba(67, 118, 170, 0.54);
+      color: rgba(238, 248, 255, 0.98);
+      border-color: rgba(141, 217, 255, 0.72);
+      font-weight: 700;
+    }
+
+    .preset-row {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .hint {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.96rem;
+      text-align: center;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .nav-row {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .page-wrap {
+        padding: 16px;
+      }
+
+      .controls {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .preset-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h1>Focus Timer</h1>
+      <p class="subtitle" id="subtitleText"></p>
+      <div class="mode-tabs" id="modeTabs">
+        <button class="mode-btn active" type="button" data-mode="pomodoro">Pomodoro</button>
+        <button class="mode-btn" type="button" data-mode="short">Short Break</button>
+        <button class="mode-btn" type="button" data-mode="long">Long Break</button>
+      </div>
+      <div class="focus-state" id="focusState">Calm Focus</div>
+      <div class="timer-display" id="timerDisplay">00:25:00</div>
+      <div class="controls">
+        <button type="button" class="primary" id="startPauseBtn">Start</button>
+        <button type="button" id="resetBtn">Reset</button>
+        <input type="number" id="minutesInput" min="1" max="180" value="25" aria-label="minutes">
+        <button type="button" id="setBtn">Set Minutes</button>
+      </div>
+      <div class="preset-row">
+        <button type="button" class="preset-btn" data-preset="25">Deep Work 25</button>
+        <button type="button" class="preset-btn" data-preset="50">Extended 50</button>
+        <button type="button" class="preset-btn" data-preset="90">Flow 90</button>
+      </div>
+      <div class="hint">Keep one tab open, mute noise, and let this session run without interruption.</div>
+      <div class="nav-row">
+        <button class="nav-btn" type="button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const user = localStorage.getItem("rolebit_user");
+    if (!user) window.location.href = "signin.html";
+
+    const KEY = "rolebit_focus_timer_page";
+    const state = JSON.parse(localStorage.getItem(KEY) || '{"secondsLeft":1500,"isRunning":false}');
+    const display = document.getElementById("timerDisplay");
+    const startPauseBtn = document.getElementById("startPauseBtn");
+    const subtitleText = document.getElementById("subtitleText");
+    const focusState = document.getElementById("focusState");
+    const modeTabs = document.getElementById("modeTabs");
+    const modeDurations = {
+      pomodoro: 25,
+      short: 5,
+      long: 15
+    };
+    let activeMode = "pomodoro";
+
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+
+    function formatDuration(totalSeconds) {
+      const seconds = Math.max(0, Number(totalSeconds) || 0);
+      const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
+      const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+      const s = String(seconds % 60).padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    }
+
+    function render() {
+      display.textContent = formatDuration(state.secondsLeft);
+      startPauseBtn.textContent = state.isRunning ? "Pause" : "Start";
+      focusState.textContent = state.isRunning ? "In Session" : "Calm Focus";
+      subtitleText.textContent = `Hi ${user}, keep this timer gentle and intentional.`;
+      modeTabs.querySelectorAll(".mode-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.mode === activeMode);
+      });
+      document.getElementById("minutesInput").value = String(Math.max(1, Math.round(state.secondsLeft / 60)));
+    }
+
+    document.getElementById("startPauseBtn").addEventListener("click", () => {
+      state.isRunning = !state.isRunning;
+      save();
+      render();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      state.isRunning = false;
+      state.secondsLeft = 1500;
+      save();
+      render();
+    });
+
+    document.getElementById("setBtn").addEventListener("click", () => {
+      const minutes = Math.max(1, Math.min(180, Number(document.getElementById("minutesInput").value) || 25));
+      state.secondsLeft = minutes * 60;
+      state.isRunning = false;
+      save();
+      render();
+    });
+
+    document.querySelectorAll(".preset-btn[data-preset]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const minutes = Number(button.dataset.preset || 25);
+        activeMode = "pomodoro";
+        state.secondsLeft = Math.max(1, Math.min(180, minutes)) * 60;
+        state.isRunning = false;
+        document.getElementById("minutesInput").value = String(minutes);
+        save();
+        render();
+      });
+    });
+
+    modeTabs.addEventListener("click", (event) => {
+      const modeBtn = event.target.closest(".mode-btn[data-mode]");
+      if (!modeBtn) return;
+      activeMode = modeBtn.dataset.mode;
+      state.secondsLeft = (modeDurations[activeMode] || 25) * 60;
+      state.isRunning = false;
+      save();
+      render();
+    });
+
+    setInterval(() => {
+      if (!state.isRunning) return;
+      if (state.secondsLeft > 0) state.secondsLeft -= 1;
+      if (state.secondsLeft <= 0) {
+        state.secondsLeft = 0;
+        state.isRunning = false;
+      }
+      save();
+      render();
+    }, 1000);
+
+    render();
+  </script>
+</body>
+</html>

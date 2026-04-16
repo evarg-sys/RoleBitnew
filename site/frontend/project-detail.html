@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Project Details</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    :root {
+      --txt: #f6fbff;
+      --muted: rgba(208, 228, 244, 0.78);
+      --shell: rgba(18, 29, 49, 0.84);
+      --line: rgba(118, 216, 255, 0.28);
+      --card: rgba(8, 17, 31, 0.84);
+    }
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+      color: var(--txt);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: var(--line);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 28px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .panel {
+      background: var(--shell);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .title {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: rgba(191, 219, 246, 0.88);
+      font-size: 0.82rem;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      border: 1px solid rgba(130, 202, 255, 0.3);
+      background: rgba(8, 14, 28, 0.88);
+      color: rgba(236, 246, 255, 0.96);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+
+    .field textarea { min-height: 90px; resize: vertical; }
+
+    .pill-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pill-btn.primary {
+      background: rgba(67, 118, 170, 0.54);
+      border-color: rgba(141, 217, 255, 0.72);
+      color: rgba(238, 248, 255, 0.98);
+    }
+
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .timeline-preview {
+      margin-top: 12px;
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      border-radius: 12px;
+      background: var(--card);
+      padding: 12px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.88rem;
+    }
+
+    .timeline-item {
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.14);
+    }
+
+    .timeline-item:last-child { border-bottom: none; }
+
+    .status {
+      margin-top: 8px;
+      min-height: 18px;
+      color: rgba(204, 235, 255, 0.9);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .page-wrap { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="timeline.html">Timeline</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h1 id="projectTitle" class="title">Project Details</h1>
+      <p class="subtitle">Single reusable project page with deeper details, git metadata, and focused management.</p>
+
+      <div id="projectFormArea"></div>
+      <div id="statusText" class="status">Loading project...</div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+  <script>
+    const user = localStorage.getItem("rolebit_user");
+    if (!user) window.location.href = "signin.html";
+
+    const API = "http://localhost:3000";
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get("projectId") || localStorage.getItem("rolebit_last_created_project_id") || "";
+    const cachedProjectPayloadRaw = localStorage.getItem("rolebit_last_created_project_payload");
+    let projectData = null;
+
+    function tryLoadCachedProject() {
+      if (!cachedProjectPayloadRaw || !projectId) return null;
+      try {
+        const parsed = JSON.parse(cachedProjectPayloadRaw);
+        if (String(parsed?.id || "") === String(projectId)) {
+          return parsed;
+        }
+      } catch (_err) {}
+      return null;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function renderForm(project) {
+      const area = document.getElementById("projectFormArea");
+      const timeline = Array.isArray(project.timeline) ? project.timeline : [];
+
+      area.innerHTML = `
+        <div class="grid">
+          <label class="field full">
+            Project Name
+            <input id="editTitle" value="${escapeHtml(project.title)}">
+          </label>
+          <label class="field">
+            Status
+            <input id="editStatus" value="${escapeHtml(project.status || "In Progress")}">
+          </label>
+          <label class="field">
+            Lifecycle
+            <select id="editLifecycle">
+              <option value="Planning" ${project.lifecycleStage === "Planning" ? "selected" : ""}>Planning</option>
+              <option value="Execution" ${project.lifecycleStage === "Execution" ? "selected" : ""}>Execution</option>
+              <option value="Review" ${project.lifecycleStage === "Review" ? "selected" : ""}>Review</option>
+              <option value="Done" ${project.lifecycleStage === "Done" ? "selected" : ""}>Done</option>
+            </select>
+          </label>
+          <label class="field">
+            Deadline
+            <input id="editDeadline" type="date" value="${escapeHtml(project.deadline || "")}">
+          </label>
+          <label class="field">
+            Progress
+            <input id="editProgress" type="number" min="0" max="100" value="${Number(project.progress || 0)}">
+          </label>
+          <label class="field">
+            Priority
+            <select id="editPriority">
+              <option value="Priority: Low" ${project.priority === "Priority: Low" ? "selected" : ""}>Low</option>
+              <option value="Priority: Medium" ${project.priority === "Priority: Medium" ? "selected" : ""}>Medium</option>
+              <option value="Priority: High" ${project.priority === "Priority: High" ? "selected" : ""}>High</option>
+              <option value="Priority: Urgent" ${project.priority === "Priority: Urgent" ? "selected" : ""}>Urgent</option>
+            </select>
+          </label>
+          <label class="field">
+            Course
+            <select id="editCourse">
+              <option value="General Studies" ${project.course === "General Studies" ? "selected" : ""}>General Studies</option>
+              <option value="Computer Science" ${project.course === "Computer Science" ? "selected" : ""}>Computer Science</option>
+              <option value="Software Engineering" ${project.course === "Software Engineering" ? "selected" : ""}>Software Engineering</option>
+              <option value="Data Science" ${project.course === "Data Science" ? "selected" : ""}>Data Science</option>
+              <option value="Information Systems" ${project.course === "Information Systems" ? "selected" : ""}>Information Systems</option>
+              <option value="Business" ${project.course === "Business" ? "selected" : ""}>Business</option>
+              <option value="Mathematics" ${project.course === "Mathematics" ? "selected" : ""}>Mathematics</option>
+              <option value="Biology" ${project.course === "Biology" ? "selected" : ""}>Biology</option>
+              <option value="Chemistry" ${project.course === "Chemistry" ? "selected" : ""}>Chemistry</option>
+              <option value="Physics" ${project.course === "Physics" ? "selected" : ""}>Physics</option>
+            </select>
+          </label>
+          <label class="field full">
+            Summary
+            <textarea id="editSummary">${escapeHtml(project.summary || "")}</textarea>
+          </label>
+          <label class="field full">
+            Git Repository URL
+            <input id="editGitRepo" value="${escapeHtml(project.gitRepoUrl || "")}" placeholder="https://github.com/org/repo">
+          </label>
+          <label class="field">
+            Git Branch
+            <input id="editGitBranch" value="${escapeHtml(project.gitBranch || "main")}">
+          </label>
+          <label class="field">
+            Git Notes
+            <input id="editGitNotes" value="${escapeHtml(project.gitNotes || "")}" placeholder="Latest commit, PR, release note">
+          </label>
+        </div>
+
+        <div class="timeline-preview">
+          <strong>Timeline Preview (${timeline.length})</strong>
+          ${timeline.length ? timeline.map((item) => `
+            <div class="timeline-item">
+              ${escapeHtml(item.task)} | Assigned: ${escapeHtml(item.owner || "Unassigned")} | Due: ${escapeHtml(item.due || "No date")}
+            </div>
+          `).join("") : `<div class="timeline-item">No timeline items yet.</div>`}
+        </div>
+
+        <div class="actions">
+          <button id="saveProjectBtn" class="pill-btn primary" type="button">Save Project</button>
+          <button class="pill-btn" type="button" onclick="window.location.href='timeline.html'">Open Timeline</button>
+          <button class="pill-btn" type="button" onclick="window.location.href='my-projects.html?projectId=${encodeURIComponent(project.id)}'">Back to My Projects</button>
+        </div>
+      `;
+    }
+
+    async function loadProject() {
+      if (!projectId) {
+        document.getElementById("statusText").textContent = "No project selected.";
+        return;
+      }
+
+      const cached = tryLoadCachedProject();
+      if (cached) {
+        projectData = cached;
+        document.getElementById("projectTitle").textContent = projectData.title || "Project Details";
+        renderForm(projectData);
+        document.getElementById("statusText").textContent = "Loaded instantly. Syncing latest data...";
+      }
+
+      try {
+        let loaded = null;
+        const listResponse = await fetchWithTimeout(`${API}/projects?username=${encodeURIComponent(user)}`);
+        if (!listResponse.ok) throw new Error("Failed to load project list");
+        const listData = await listResponse.json();
+        const projects = Array.isArray(listData.projects) ? listData.projects : [];
+        loaded = projects.find((project) => String(project.id) === String(projectId)) || null;
+
+        if (!loaded) {
+          try {
+            const response = await fetchWithTimeout(`${API}/projects/${encodeURIComponent(projectId)}?username=${encodeURIComponent(user)}`);
+            if (response.ok) {
+              const data = await response.json();
+              loaded = data.project || null;
+            }
+          } catch (_ignore) {}
+        }
+
+        if (!loaded) throw new Error("Project not found");
+        projectData = loaded;
+        localStorage.setItem("rolebit_last_created_project_id", String(projectData.id));
+        localStorage.setItem("rolebit_last_created_project_payload", JSON.stringify(projectData));
+        document.getElementById("projectTitle").textContent = projectData.title || "Project Details";
+        renderForm(projectData);
+        document.getElementById("statusText").textContent = "Project ready.";
+      } catch (err) {
+        if (projectData) {
+          document.getElementById("statusText").textContent = "Using cached project data. Backend sync unavailable.";
+          return;
+        }
+        if (err?.name === "AbortError") {
+          document.getElementById("statusText").textContent = "Backend not reachable. Start server: npm --prefix backend start";
+          return;
+        }
+        document.getElementById("statusText").textContent = "Could not load project details.";
+      }
+    }
+
+    async function saveProject() {
+      if (!projectData) return;
+
+      const payload = {
+        username: user,
+        title: document.getElementById("editTitle")?.value || projectData.title,
+        summary: document.getElementById("editSummary")?.value || projectData.summary,
+        status: document.getElementById("editStatus")?.value || projectData.status,
+        deadline: document.getElementById("editDeadline")?.value || projectData.deadline,
+        progress: Number(document.getElementById("editProgress")?.value || projectData.progress || 0),
+        visibility: projectData.visibility || "private",
+        lifecycleStage: document.getElementById("editLifecycle")?.value || projectData.lifecycleStage || "Planning",
+        members: Array.isArray(projectData.members) ? projectData.members : [user],
+        team: projectData.team || "Team: 1 person",
+        priority: document.getElementById("editPriority")?.value || projectData.priority,
+        risk: projectData.risk || "Risk: None",
+        course: document.getElementById("editCourse")?.value || projectData.course,
+        gitRepoUrl: document.getElementById("editGitRepo")?.value || "",
+        gitBranch: document.getElementById("editGitBranch")?.value || "main",
+        gitNotes: document.getElementById("editGitNotes")?.value || ""
+      };
+
+      try {
+        document.getElementById("statusText").textContent = "Saving project...";
+        const response = await fetch(`${API}/projects/${encodeURIComponent(projectId)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error("Failed save");
+        document.getElementById("statusText").textContent = "Project saved.";
+        loadProject();
+      } catch (_err) {
+        document.getElementById("statusText").textContent = "Could not save project.";
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("#saveProjectBtn")) {
+        saveProject();
+      }
+    });
+
+    loadProject();
+  </script>
+</body>
+</html>

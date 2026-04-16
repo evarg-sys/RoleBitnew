@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - To-Do</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700&family=IBM+Plex+Sans:wght@500;700&display=swap');
+
+    :root {
+      --text: #f8fcff;
+      --muted: rgba(205, 219, 236, 0.78);
+      --frame: rgba(20, 32, 54, 0.84);
+      --line: rgba(126, 200, 255, 0.32);
+      --card: rgba(8, 17, 33, 0.8);
+      --blue: #7ec8ff;
+      --green: #44e5a6;
+      --orange: #ffbf67;
+    }
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(126, 200, 255, 0.24);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: rgba(126, 200, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      min-height: 100vh;
+      padding: 32px;
+      background: transparent;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.9fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .frame {
+      background: var(--frame);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+      padding: 18px;
+    }
+
+    .hero-title {
+      margin: 0 0 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2rem, 3.2vw, 2.8rem);
+      line-height: 1.05;
+      color: var(--text);
+    }
+
+    .hero-copy {
+      color: var(--muted);
+      margin: 0 0 14px;
+      font-size: 0.95rem;
+    }
+
+    .agenda-banner {
+      border-radius: 14px;
+      border: 1px solid rgba(126, 200, 255, 0.34);
+      background: linear-gradient(132deg, rgba(16, 31, 58, 0.95), rgba(15, 37, 50, 0.95));
+      padding: 14px;
+      min-height: 118px;
+      font-size: 1.02rem;
+      color: rgba(233, 245, 255, 0.96);
+      line-height: 1.4;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .stats {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      border-radius: 12px;
+      border: 1px solid rgba(126, 200, 255, 0.28);
+      background: var(--card);
+      padding: 10px;
+    }
+
+    .value {
+      font-size: 1.38rem;
+      line-height: 1;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .label {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .board h2 {
+      margin: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      color: var(--text);
+    }
+
+    .toolbar {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 140px 130px auto;
+      gap: 10px;
+    }
+
+    .field,
+    .button,
+    .tab,
+    .nav-btn,
+    .mini-btn,
+    .chip {
+      border: 1px solid rgba(126, 200, 255, 0.3);
+      background: rgba(11, 22, 42, 0.9);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+
+    .button {
+      cursor: pointer;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(70, 164, 255, 0.4), rgba(68, 229, 166, 0.36));
+    }
+
+    .tabs {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    .tab.active {
+      border-color: rgba(126, 200, 255, 0.82);
+      box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.34) inset;
+    }
+
+    .section-title {
+      margin: 16px 0 8px;
+      font-family: 'Outfit', sans-serif;
+      color: rgba(232, 245, 255, 0.97);
+      font-size: 1rem;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .task-card {
+      border-radius: 12px;
+      border: 1px solid rgba(126, 200, 255, 0.22);
+      background: rgba(7, 15, 30, 0.88);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .task-card.done {
+      border-color: rgba(68, 229, 166, 0.42);
+      opacity: 0.78;
+    }
+
+    .tick {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    .task-main {
+      min-width: 0;
+    }
+
+    .task-text {
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .task-card.done .task-text {
+      text-decoration: line-through;
+    }
+
+    .meta {
+      margin-top: 5px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    .chip.high { border-color: rgba(255, 154, 154, 0.55); color: #ffb4b4; }
+    .chip.medium { border-color: rgba(255, 191, 103, 0.55); color: #ffd8a3; }
+    .chip.low { border-color: rgba(68, 229, 166, 0.52); color: #bdf9df; }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mini-btn {
+      font-size: 0.76rem;
+      padding: 7px 9px;
+      cursor: pointer;
+    }
+
+    .empty {
+      border: 1px dashed rgba(126, 200, 255, 0.28);
+      border-radius: 12px;
+      padding: 16px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(9, 16, 31, 0.62);
+    }
+
+    .nav-row {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .page-wrap { padding: 18px; }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .task-card {
+        grid-template-columns: auto 1fr;
+      }
+
+      .actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <main class="page-wrap">
+    <div class="layout">
+      <section class="frame">
+        <h1 class="hero-title">Today's Agenda</h1>
+        <p class="hero-copy" id="heroCopy"></p>
+        <div class="agenda-banner" id="agendaBanner"></div>
+
+        <div class="stats">
+          <article class="stat">
+            <div class="value" id="openCount">0</div>
+            <div class="label">Open Tasks</div>
+          </article>
+          <article class="stat">
+            <div class="value" id="doneCount">0</div>
+            <div class="label">Completed</div>
+          </article>
+          <article class="stat">
+            <div class="value" id="highCount">0</div>
+            <div class="label">High Priority</div>
+          </article>
+          <article class="stat">
+            <div class="value" id="progressPct">0%</div>
+            <div class="label">Completion Rate</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="frame board">
+        <h2>Execution Board</h2>
+        <div class="toolbar">
+          <input id="taskInput" class="field" type="text" placeholder="What needs to happen next?">
+          <input id="dueInput" class="field" type="date">
+          <select id="priorityInput" class="field" aria-label="Priority">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <button id="addBtn" class="button" type="button">Add Task</button>
+        </div>
+
+        <div class="tabs" id="filterTabs">
+          <button class="tab active" data-filter="all" type="button">All</button>
+          <button class="tab" data-filter="open" type="button">Open</button>
+          <button class="tab" data-filter="done" type="button">Done</button>
+          <button class="tab" data-filter="high" type="button">High Priority</button>
+        </div>
+
+        <h3 class="section-title">In Motion</h3>
+        <div class="list" id="openList"></div>
+
+        <h3 class="section-title">Wrapped Up</h3>
+        <div class="list" id="doneList"></div>
+
+        <div class="nav-row">
+          <button class="nav-btn" type="button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const user = localStorage.getItem("rolebit_user");
+    if (!user) window.location.href = "signin.html";
+
+    const KEY = "rolebit_todo_page";
+    let activeFilter = "all";
+
+    function normalizeTask(item) {
+      if (typeof item === "string") {
+        return { text: item, due: "", priority: "medium", done: false, completedAt: "" };
+      }
+      return {
+        text: String(item.text || "Task"),
+        due: String(item.due || ""),
+        priority: String(item.priority || "medium"),
+        done: Boolean(item.done),
+        completedAt: String(item.completedAt || "")
+      };
+    }
+
+    let todos = JSON.parse(localStorage.getItem(KEY) || "[]").map(normalizeTask);
+
+    if (!todos.length) {
+      todos = [
+        { text: "Finalize dashboard widgets copy", due: "2026-04-15", priority: "high", done: false, completedAt: "" },
+        { text: "Review mobile spacing", due: "2026-04-16", priority: "medium", done: true, completedAt: "10:20" }
+      ];
+    }
+
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(todos));
+    }
+
+    function selectAgendaLine() {
+      const next = todos
+        .filter((item) => !item.done)
+        .sort((a, b) => {
+          const aDue = a.due || "9999-12-31";
+          const bDue = b.due || "9999-12-31";
+          if (a.priority !== b.priority) {
+            const weight = { high: 0, medium: 1, low: 2 };
+            return weight[a.priority] - weight[b.priority];
+          }
+          return aDue.localeCompare(bDue);
+        })[0];
+
+      if (!next) {
+        return "You cleared everything. Perfect moment to pull in tomorrow's priorities.";
+      }
+
+      const dueCopy = next.due ? ` by ${next.due}` : "";
+      return `Next move: ${next.text}${dueCopy}. Keep it sharp and finish strong.`;
+    }
+
+    function matchesFilter(item) {
+      if (activeFilter === "all") return true;
+      if (activeFilter === "open") return !item.done;
+      if (activeFilter === "done") return item.done;
+      if (activeFilter === "high") return item.priority === "high";
+      return true;
+    }
+
+    function taskMarkup(item, index) {
+      return `
+        <article class="task-card ${item.done ? "done" : ""}">
+          <input class="tick" type="checkbox" data-action="toggle" data-index="${index}" ${item.done ? "checked" : ""}>
+          <div class="task-main">
+            <div class="task-text">${item.text}</div>
+            <div class="meta">
+              <span class="chip ${item.priority}">${item.priority.toUpperCase()}</span>
+              <span class="chip">${item.due || "No date"}</span>
+              ${item.done ? `<span class="chip low">Done ${item.completedAt || "today"}</span>` : ""}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="mini-btn" data-action="remove" data-index="${index}" type="button">Remove</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderStats() {
+      const open = todos.filter((item) => !item.done).length;
+      const done = todos.filter((item) => item.done).length;
+      const high = todos.filter((item) => item.priority === "high" && !item.done).length;
+      const pct = todos.length ? Math.round((done / todos.length) * 100) : 0;
+
+      document.getElementById("openCount").textContent = String(open);
+      document.getElementById("doneCount").textContent = String(done);
+      document.getElementById("highCount").textContent = String(high);
+      document.getElementById("progressPct").textContent = `${pct}%`;
+      document.getElementById("heroCopy").textContent = `Hi ${user}, this is your conversational command center for execution.`;
+      document.getElementById("agendaBanner").textContent = selectAgendaLine();
+    }
+
+    function renderLists() {
+      const filtered = todos.filter(matchesFilter);
+      const open = filtered.filter((item) => !item.done);
+      const done = filtered.filter((item) => item.done);
+
+      const openList = document.getElementById("openList");
+      const doneList = document.getElementById("doneList");
+
+      openList.innerHTML = open.length
+        ? open.map((item) => taskMarkup(item, todos.indexOf(item))).join("")
+        : '<div class="empty">No open tasks for this filter.</div>';
+
+      doneList.innerHTML = done.length
+        ? done.map((item) => taskMarkup(item, todos.indexOf(item))).join("")
+        : '<div class="empty">No completed tasks yet for this filter.</div>';
+    }
+
+    function renderTabs() {
+      document.querySelectorAll("#filterTabs .tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.filter === activeFilter);
+      });
+    }
+
+    function renderAll() {
+      renderStats();
+      renderTabs();
+      renderLists();
+      save();
+    }
+
+    document.getElementById("addBtn").addEventListener("click", () => {
+      const text = document.getElementById("taskInput").value.trim();
+      const due = document.getElementById("dueInput").value || "";
+      const priority = document.getElementById("priorityInput").value || "medium";
+      if (!text) return;
+
+      todos.unshift({ text, due, priority, done: false, completedAt: "" });
+      document.getElementById("taskInput").value = "";
+      renderAll();
+    });
+
+    document.getElementById("filterTabs").addEventListener("click", (event) => {
+      const tab = event.target.closest(".tab[data-filter]");
+      if (!tab) return;
+      activeFilter = tab.dataset.filter;
+      renderAll();
+    });
+
+    document.addEventListener("click", (event) => {
+      const actionEl = event.target.closest("[data-action]");
+      if (!actionEl) return;
+      const index = Number(actionEl.dataset.index || -1);
+      if (index < 0 || !todos[index]) return;
+
+      if (actionEl.dataset.action === "remove") {
+        todos.splice(index, 1);
+      }
+
+      renderAll();
+    });
+
+    document.addEventListener("change", (event) => {
+      const actionEl = event.target.closest("[data-action='toggle']");
+      if (!actionEl) return;
+      const index = Number(actionEl.dataset.index || -1);
+      if (index < 0 || !todos[index]) return;
+
+      todos[index].done = event.target.checked;
+      todos[index].completedAt = todos[index].done
+        ? `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`
+        : "";
+      renderAll();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>

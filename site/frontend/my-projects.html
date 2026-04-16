@@ -3,16 +3,74 @@
 <head>
   <title>Rolebit - My Projects</title>
   <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
   <style>
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: rgba(118, 216, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
     .projects-page {
-      margin-left: 70px;
+      margin-left: 84px;
       min-height: 100vh;
       padding: 36px 48px;
       transition: margin-left 0.35s ease;
+      position: relative;
+      z-index: 1;
     }
 
     .sidebar:hover ~ .projects-page {
-      margin-left: 220px;
+      margin-left: 234px;
     }
 
     .projects-header {
@@ -22,6 +80,39 @@
       margin-bottom: 22px;
       gap: 12px;
       flex-wrap: wrap;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .pill-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pill-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(12, 25, 44, 0.38);
+      border-color: rgba(141, 217, 255, 0.72);
+      background: rgba(71, 124, 178, 0.5);
+    }
+
+    .pill-btn.primary {
+      background: rgba(67, 118, 170, 0.54);
+      border-color: rgba(141, 217, 255, 0.72);
+      color: rgba(238, 248, 255, 0.98);
     }
 
     .projects-header h1 {
@@ -39,7 +130,7 @@
       display: grid;
       grid-template-columns: 1.3fr 1fr;
       gap: 18px;
-      align-items: start;
+      align-items: stretch;
     }
 
     .panel {
@@ -56,10 +147,18 @@
       color: rgba(255, 255, 255, 0.95);
     }
 
+    .panel.top-panel {
+      min-height: 430px;
+      display: flex;
+      flex-direction: column;
+    }
+
     .projects-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 12px;
+      flex: 1;
+      align-content: start;
     }
 
     .project-card {
@@ -108,14 +207,14 @@
       border-radius: 999px;
     }
 
-    .next-list,
+    .timeline-list,
     .detail-list {
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
 
-    .next-item,
+    .timeline-item,
     .detail-item {
       border: 1px solid rgba(255, 255, 255, 0.11);
       border-radius: 10px;
@@ -123,6 +222,93 @@
       padding: 10px;
       color: rgba(225, 238, 255, 0.9);
       font-size: 0.9rem;
+    }
+
+    .timeline-wrap {
+      position: relative;
+      margin-top: 6px;
+      padding-left: 26px;
+    }
+
+    .timeline-wrap::before {
+      content: "";
+      position: absolute;
+      left: 9px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: linear-gradient(180deg, rgba(100, 200, 255, 0.5), rgba(66, 240, 161, 0.5));
+      border-radius: 999px;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(7, 13, 27, 0.7);
+      border-color: rgba(100, 200, 255, 0.22);
+    }
+
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -22px;
+      top: 16px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(100, 200, 255, 0.95);
+      box-shadow: 0 0 0 3px rgba(12, 22, 44, 1);
+    }
+
+    .timeline-item.completed::before {
+      background: rgba(66, 240, 161, 0.95);
+    }
+
+    .timeline-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    .timeline-task {
+      font-size: 0.96rem;
+      color: rgba(235, 246, 255, 0.96);
+      font-weight: 600;
+    }
+
+    .timeline-due {
+      font-size: 0.8rem;
+      color: rgba(150, 192, 240, 0.92);
+    }
+
+    .timeline-meta {
+      margin-top: 7px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      color: rgba(195, 220, 248, 0.88);
+      font-size: 0.8rem;
+    }
+
+    .timeline-pill {
+      border-radius: 999px;
+      border: 1px solid rgba(100, 200, 255, 0.3);
+      padding: 3px 8px;
+      background: rgba(10, 20, 38, 0.9);
+    }
+
+    .timeline-pill.success {
+      border-color: rgba(66, 240, 161, 0.5);
+      color: rgba(180, 255, 220, 0.95);
+    }
+
+    .timeline-pill.pending {
+      border-color: rgba(255, 200, 110, 0.5);
+      color: rgba(255, 220, 168, 0.95);
     }
 
     .detail-title {
@@ -144,10 +330,90 @@
       margin-bottom: 8px;
     }
 
-    .top-right-logout-btn {
-      position: fixed;
-      right: 22px;
-      top: 22px;
+    .edit-grid {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .edit-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .edit-label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: rgba(191, 219, 246, 0.88);
+      font-size: 0.8rem;
+    }
+
+    .edit-input,
+    .edit-select,
+    .edit-textarea {
+      border: 1px solid rgba(130, 202, 255, 0.3);
+      background: rgba(8, 14, 28, 0.88);
+      color: rgba(236, 246, 255, 0.96);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.88rem;
+    }
+
+    .edit-textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .members-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      border: 1px solid rgba(130, 202, 255, 0.2);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(8, 14, 28, 0.55);
+      max-height: 170px;
+      overflow: auto;
+    }
+
+    .member-option {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      font-size: 0.8rem;
+      color: rgba(217, 235, 252, 0.92);
+    }
+
+    .member-option input {
+      accent-color: rgba(120, 220, 255, 0.9);
+    }
+
+    .timeline-editor {
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .timeline-editor input,
+    .timeline-editor select {
+      border: 1px solid rgba(130, 202, 255, 0.3);
+      background: rgba(8, 14, 28, 0.88);
+      color: rgba(236, 246, 255, 0.96);
+      border-radius: 10px;
+      padding: 9px;
+      font-size: 0.85rem;
+    }
+
+    .empty-state {
+      border: 1px dashed rgba(118, 216, 255, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      color: rgba(205, 225, 248, 0.86);
+      text-align: center;
+      background: rgba(8, 13, 24, 0.62);
     }
 
     @media (max-width: 1100px) {
@@ -160,6 +426,10 @@
       .projects-page {
         margin-left: 70px;
         padding: 22px;
+      }
+
+      .timeline-editor {
+        grid-template-columns: 1fr;
       }
 
       .projects-header h1 {
@@ -186,6 +456,10 @@
       <h1>My Projects</h1>
       <div class="projects-subtitle" id="projectsSubtitle">Active projects and what is next.</div>
     </div>
+    <div class="header-controls">
+      <button id="newProjectBtn" class="pill-btn primary" type="button">New Project</button>
+      <button id="refreshProjectsBtn" class="pill-btn" type="button">Refresh</button>
+    </div>
   </header>
 
   <div class="projects-layout">
@@ -194,19 +468,19 @@
       <div class="projects-grid" id="activeProjectsGrid"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel top-panel">
       <h2>Project Details</h2>
       <div id="projectDetails"></div>
     </section>
 
     <section class="panel" style="grid-column: 1 / -1;">
-      <h2>What Is Next</h2>
-      <div class="next-list" id="nextList"></div>
+      <h2>Project Timeline</h2>
+      <div class="timeline-wrap">
+        <div class="timeline-list" id="projectTimeline"></div>
+      </div>
     </section>
   </div>
 </div>
-
-<button class="top-right-logout-btn" onclick="logout(); return false;" title="Logout">Logout</button>
 
 <script src="script.js"></script>
 <script>
@@ -215,52 +489,100 @@
     window.location.href = "signin.html";
   }
 
-  const projects = [
-    {
-      id: "p1",
-      name: "Website Redesign",
-      owner: "Design Team",
-      progress: 68,
-      status: "In Progress",
-      deadline: "Mar 18, 2026",
-      summary: "Rebuild the landing and onboarding experience with improved conversion-focused sections.",
-      next: ["Finalize hero interaction", "Approve mobile QA", "Publish v2 content"],
-      info: ["Team: 5 people", "Priority: High", "Budget: On track"]
-    },
-    {
-      id: "p2",
-      name: "API Integration",
-      owner: "Backend Team",
-      progress: 42,
-      status: "In Progress",
-      deadline: "Mar 24, 2026",
-      summary: "Connect billing, analytics, and user event pipelines into a single service layer.",
-      next: ["Finish payment webhook", "Audit API logs", "Run staging tests"],
-      info: ["Team: 3 people", "Priority: Medium", "Risk: Payment retries"]
-    },
-    {
-      id: "p3",
-      name: "Mobile Beta",
-      owner: "Product Team",
-      progress: 55,
-      status: "In Review",
-      deadline: "Apr 4, 2026",
-      summary: "Prepare iOS and Android beta candidate with key dashboard and project workflows.",
-      next: ["Close top 5 QA bugs", "Push beta release notes", "Invite first cohort"],
-      info: ["Team: 6 people", "Priority: High", "Scope: MVP features"]
-    }
-  ];
+  const PROJECTS_API_BASE = "http://localhost:3000";
+  const PRESELECT_PROJECT_ID = new URLSearchParams(window.location.search).get("projectId");
+  let projects = [];
+  let selectedProjectId = "";
+  let availableUsers = [];
 
-  let selectedProjectId = projects[0].id;
+  function mapProjectFromApi(project) {
+    return {
+      id: String(project.id),
+      name: project.title,
+      owner: project.ownerUsername,
+      status: project.status || "In Progress",
+      progress: Number(project.progress || 0),
+      deadline: project.deadline || "",
+      visibility: project.visibility || "private",
+      lifecycleStage: project.lifecycleStage || "Planning",
+      course: project.course || "General Studies",
+      members: Array.isArray(project.members) && project.members.length ? project.members : [project.ownerUsername],
+      summary: project.summary || "",
+      team: project.team || "Team: 1 person",
+      priority: project.priority || "Priority: Medium",
+      risk: project.risk || "Risk: None",
+      next: Array.isArray(project.timeline) ? project.timeline.map((item) => ({
+        id: String(item.id || Math.random()),
+        task: item.task || "",
+        owner: item.owner || "",
+        due: item.due || "",
+        completedBy: item.completedBy || "",
+        completed: Boolean(item.completed)
+      })) : [],
+      isOwned: project.ownerUsername === user
+    };
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  async function loadUsers() {
+    try {
+      const response = await fetch(`${PROJECTS_API_BASE}/users`);
+      if (!response.ok) throw new Error("Failed to load users");
+      const data = await response.json();
+      const incoming = Array.isArray(data.users) ? data.users : [];
+      availableUsers = incoming.length ? incoming : [user];
+    } catch (_err) {
+      availableUsers = [user];
+    }
+  }
+
+  async function loadProjects() {
+    try {
+      const response = await fetch(`${PROJECTS_API_BASE}/projects?username=${encodeURIComponent(user)}`);
+      if (!response.ok) throw new Error("Failed to load projects");
+      const data = await response.json();
+      const incoming = Array.isArray(data.projects) ? data.projects.map(mapProjectFromApi) : [];
+      projects = incoming;
+    } catch (_err) {
+      projects = [];
+      const subtitle = document.getElementById("projectsSubtitle");
+      if (subtitle) {
+        subtitle.textContent = `Could not load SQL projects right now. Make sure backend is running on localhost:3000.`;
+      }
+    }
+
+    if (PRESELECT_PROJECT_ID && projects.some((project) => String(project.id) === String(PRESELECT_PROJECT_ID))) {
+      selectedProjectId = String(PRESELECT_PROJECT_ID);
+    } else {
+      selectedProjectId = projects[0]?.id || "";
+    }
+    renderAll();
+  }
 
   function renderActiveProjects() {
     const grid = document.getElementById("activeProjectsGrid");
+    if (!projects.length) {
+      grid.innerHTML = '<div class="empty-state">No SQL projects found for your account yet. Create one from Add Project.</div>';
+      return;
+    }
+
     grid.innerHTML = projects.map((project) => {
       const isActive = project.id === selectedProjectId ? "active" : "";
+      const visibilityLabel = project.visibility === "shared" ? "Shared" : "Private";
+      const dueLabel = project.deadline || "No date";
       return `
         <article class="project-card ${isActive}" data-project-id="${project.id}">
           <div class="project-name">${project.name}</div>
-          <div class="project-meta">${project.owner} | ${project.status} | Due ${project.deadline}</div>
+          <div class="project-meta">${project.owner} | ${project.course} | ${project.status} | ${project.lifecycleStage} | ${visibilityLabel} | Due ${dueLabel}</div>
+          <div style="margin:8px 0 10px;"><button class="pill-btn" type="button" data-action="open-project-page" data-project-id="${project.id}">Open Project Page</button></div>
           <div class="progress-track"><div class="progress-fill" style="width: ${project.progress}%;"></div></div>
         </article>
       `;
@@ -268,40 +590,224 @@
   }
 
   function renderProjectDetails() {
-    const project = projects.find((item) => item.id === selectedProjectId) || projects[0];
+    const project = projects.find((item) => item.id === selectedProjectId);
     const details = document.getElementById("projectDetails");
+
+    if (!project) {
+      details.innerHTML = '<div class="empty-state">Choose a project to view and edit details.</div>';
+      return;
+    }
+
+    const disabled = project.isOwned ? "" : "disabled";
+    const memberOptions = availableUsers.map((username) => {
+      const checked = project.members.includes(username) ? "checked" : "";
+      return `<label class="member-option"><input type="checkbox" class="edit-member-checkbox" value="${escapeHtml(username)}" ${checked} ${disabled}>${escapeHtml(username)}</label>`;
+    }).join("");
+
     details.innerHTML = `
-      <h3 class="detail-title">${project.name}</h3>
-      <p class="detail-copy">${project.summary}</p>
-      <div class="detail-mini">Status: ${project.status}</div>
-      <div class="detail-mini">Due: ${project.deadline}</div>
+      <h3 class="detail-title">${escapeHtml(project.name)}</h3>
+      <p class="detail-copy">${escapeHtml(project.summary)}</p>
+      <div class="detail-mini">Status: ${escapeHtml(project.status)}</div>
+      <div class="detail-mini">Lifecycle: ${escapeHtml(project.lifecycleStage)}</div>
+      <div class="detail-mini">Course: ${escapeHtml(project.course)}</div>
+      <div class="detail-mini">Due: ${project.deadline || "No date"}</div>
       <div class="detail-list">
-        ${project.info.map((line) => `<div class="detail-item">${line}</div>`).join("")}
+        <div class="detail-item">${escapeHtml(project.team)}</div>
+        <div class="detail-item">${escapeHtml(project.priority)}</div>
+        <div class="detail-item">${escapeHtml(project.risk)}</div>
       </div>
+
+      <div class="edit-grid">
+        <label class="edit-label">
+          Status
+          <input id="editStatus" class="edit-input" value="${project.status}" ${disabled}>
+        </label>
+        <label class="edit-label">
+          Deadline
+          <input id="editDeadline" class="edit-input" type="date" value="${project.deadline || ""}" ${disabled}>
+        </label>
+        <label class="edit-label">
+          Progress
+          <input id="editProgress" class="edit-input" type="number" min="0" max="100" value="${project.progress}" ${disabled}>
+        </label>
+        <label class="edit-label">
+          Visibility
+          <select id="editVisibility" class="edit-select" ${disabled}>
+            <option value="private" ${project.visibility === "private" ? "selected" : ""}>Private</option>
+            <option value="shared" ${project.visibility === "shared" ? "selected" : ""}>Shared</option>
+          </select>
+        </label>
+        <label class="edit-label">
+          Lifecycle
+          <select id="editLifecycle" class="edit-select" ${disabled}>
+            <option value="Planning" ${project.lifecycleStage === "Planning" ? "selected" : ""}>Planning</option>
+            <option value="Execution" ${project.lifecycleStage === "Execution" ? "selected" : ""}>Execution</option>
+            <option value="Review" ${project.lifecycleStage === "Review" ? "selected" : ""}>Review</option>
+            <option value="Done" ${project.lifecycleStage === "Done" ? "selected" : ""}>Done</option>
+          </select>
+        </label>
+        <label class="edit-label">
+          Team
+          <input id="editTeam" class="edit-input" value="${escapeHtml(project.team)}" ${disabled}>
+        </label>
+        <label class="edit-label">
+          Priority
+          <select id="editPriority" class="edit-select" ${disabled}>
+            <option value="Priority: Low" ${project.priority === "Priority: Low" ? "selected" : ""}>Low</option>
+            <option value="Priority: Medium" ${project.priority === "Priority: Medium" ? "selected" : ""}>Medium</option>
+            <option value="Priority: High" ${project.priority === "Priority: High" ? "selected" : ""}>High</option>
+            <option value="Priority: Urgent" ${project.priority === "Priority: Urgent" ? "selected" : ""}>Urgent</option>
+          </select>
+        </label>
+        <label class="edit-label">
+          Course
+          <select id="editCourse" class="edit-select" ${disabled}>
+            <option value="General Studies" ${project.course === "General Studies" ? "selected" : ""}>General Studies</option>
+            <option value="Computer Science" ${project.course === "Computer Science" ? "selected" : ""}>Computer Science</option>
+            <option value="Software Engineering" ${project.course === "Software Engineering" ? "selected" : ""}>Software Engineering</option>
+            <option value="Data Science" ${project.course === "Data Science" ? "selected" : ""}>Data Science</option>
+            <option value="Information Systems" ${project.course === "Information Systems" ? "selected" : ""}>Information Systems</option>
+            <option value="Business" ${project.course === "Business" ? "selected" : ""}>Business</option>
+            <option value="Mathematics" ${project.course === "Mathematics" ? "selected" : ""}>Mathematics</option>
+            <option value="Biology" ${project.course === "Biology" ? "selected" : ""}>Biology</option>
+            <option value="Chemistry" ${project.course === "Chemistry" ? "selected" : ""}>Chemistry</option>
+            <option value="Physics" ${project.course === "Physics" ? "selected" : ""}>Physics</option>
+          </select>
+        </label>
+        <label class="edit-label">
+          Risk
+          <input id="editRisk" class="edit-input" value="${escapeHtml(project.risk)}" ${disabled}>
+        </label>
+        <label class="edit-label full">
+          Members
+          <div class="members-picker">${memberOptions}</div>
+        </label>
+        <label class="edit-label full">
+          Summary
+          <textarea id="editSummary" class="edit-textarea" ${disabled}>${escapeHtml(project.summary)}</textarea>
+        </label>
+      </div>
+      <div style="margin-top:10px;"><button class="pill-btn" type="button" onclick="window.location.href='project-detail.html?projectId=${encodeURIComponent(project.id)}'">Open Project Detail Page</button></div>
+      ${project.isOwned ? '<button id="saveProjectBtn" class="pill-btn primary" type="button">Save Project</button>' : '<div class="detail-mini">Shared project: view only</div>'}
     `;
   }
 
-  function renderNextList() {
-    const nextList = document.getElementById("nextList");
-    const items = projects.flatMap((project) =>
-      project.next.map((step) => ({ label: `${project.name}: ${step}`, deadline: project.deadline }))
-    );
-    nextList.innerHTML = items.map((item) => `<div class="next-item">${item.label} (target: ${item.deadline})</div>`).join("");
+  function renderTimeline() {
+    const timeline = document.getElementById("projectTimeline");
+    const project = projects.find((item) => item.id === selectedProjectId);
+
+    if (!project) {
+      timeline.innerHTML = '<div class="empty-state">No timeline data yet.</div>';
+      return;
+    }
+
+    if (!project.next.length) {
+      timeline.innerHTML = `
+        <div class="empty-state">No timeline steps yet for this project.</div>
+        <div style="margin-top:10px;"><button class="pill-btn" type="button" onclick="window.location.href='timeline.html'">Open Timeline Page</button></div>
+      `;
+      return;
+    }
+
+    timeline.innerHTML = `
+      ${project.next.map((item) => {
+      const completedClass = item.completed ? "completed" : "pending";
+      const statusPill = item.completed
+        ? `<span class="timeline-pill success">Completed by ${escapeHtml(item.completedBy || user)}</span>`
+        : `<span class="timeline-pill pending">In Progress</span>`;
+
+      return `
+        <article class="timeline-item ${completedClass}" data-timeline-id="${item.id}">
+          <div class="timeline-row">
+            <div class="timeline-task">${escapeHtml(item.task)}</div>
+            <div class="timeline-due">Due ${escapeHtml(item.due || "No date")}</div>
+          </div>
+          <div class="timeline-meta">
+            <span class="timeline-pill">Project: ${escapeHtml(project.name)}</span>
+            <span class="timeline-pill">Assigned: ${escapeHtml(item.owner || "Unassigned")}</span>
+            ${statusPill}
+          </div>
+        </article>
+      `;
+      }).join("")}
+      <div style="margin-top:10px;"><button class="pill-btn" type="button" onclick="window.location.href='timeline.html'">Open Timeline Page</button></div>
+    `;
+  }
+
+  async function updateProject(projectId, payload) {
+    const response = await fetch(`${PROJECTS_API_BASE}/projects/${projectId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: user, ...payload })
+    });
+    if (!response.ok) throw new Error("Failed to update project");
+    return response.json();
+  }
+
+  function getSelectedMembers() {
+    const selected = Array.from(document.querySelectorAll(".edit-member-checkbox:checked")).map((item) => item.value);
+    if (!selected.includes(user)) selected.push(user);
+    return selected;
+  }
+
+  function renderAll() {
+    renderActiveProjects();
+    renderProjectDetails();
+    renderTimeline();
   }
 
   document.addEventListener("click", (event) => {
     const card = event.target.closest(".project-card[data-project-id]");
-    if (!card) return;
-    selectedProjectId = card.dataset.projectId;
-    renderActiveProjects();
-    renderProjectDetails();
+    if (card) {
+      selectedProjectId = card.dataset.projectId;
+      renderAll();
+      return;
+    }
+
+    const saveBtn = event.target.closest("#saveProjectBtn");
+    if (saveBtn) {
+      const project = projects.find((item) => item.id === selectedProjectId);
+      if (!project || !project.isOwned) return;
+
+      updateProject(project.id, {
+        title: project.name,
+        summary: document.getElementById("editSummary")?.value || project.summary,
+        status: document.getElementById("editStatus")?.value || project.status,
+        deadline: document.getElementById("editDeadline")?.value || project.deadline,
+        progress: Number(document.getElementById("editProgress")?.value || project.progress),
+        visibility: document.getElementById("editVisibility")?.value || project.visibility,
+        lifecycleStage: document.getElementById("editLifecycle")?.value || project.lifecycleStage,
+        members: getSelectedMembers(),
+        team: document.getElementById("editTeam")?.value || project.team,
+        priority: document.getElementById("editPriority")?.value || project.priority,
+        course: document.getElementById("editCourse")?.value || project.course,
+        risk: document.getElementById("editRisk")?.value || project.risk
+      }).then(() => loadProjects()).catch(() => alert("Could not save project right now."));
+      return;
+    }
+
+    if (event.target.closest("#newProjectBtn")) {
+      window.location.href = "add-project.html";
+      return;
+    }
+
+    if (event.target.closest("#refreshProjectsBtn")) {
+      loadProjects();
+      return;
+    }
+
+    const openProjectPageBtn = event.target.closest("[data-action='open-project-page']");
+    if (openProjectPageBtn) {
+      const projectId = openProjectPageBtn.dataset.projectId;
+      if (projectId) {
+        window.location.href = `project-detail.html?projectId=${encodeURIComponent(projectId)}`;
+      }
+    }
+
   });
 
-  document.getElementById("projectsSubtitle").textContent = `Good Morning, ${user}. Active projects and what is next.`;
-
-  renderActiveProjects();
-  renderProjectDetails();
-  renderNextList();
+  document.getElementById("projectsSubtitle").textContent = `Good Morning, ${user}. Assign members, due dates, and timeline updates like a shared workspace.`;
+  loadUsers().then(loadProjects);
 </script>
 </body>
 </html>

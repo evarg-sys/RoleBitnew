@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Reminders</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    :root {
+      --ink: #f5fbff;
+      --muted: rgba(214, 231, 244, 0.78);
+      --shell: rgba(18, 28, 48, 0.84);
+      --shell-border: rgba(117, 217, 255, 0.28);
+      --panel: rgba(10, 17, 33, 0.78);
+      --chip: rgba(16, 27, 52, 0.88);
+      --ok: #39e29f;
+      --todo: #ffc56a;
+      --accent: #75d9ff;
+    }
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(117, 217, 255, 0.22);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: rgba(117, 217, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      min-height: 100vh;
+      padding: 32px;
+      background: transparent;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.9fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .shell {
+      background: var(--shell);
+      border: 1px solid var(--shell-border);
+      border-radius: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+      padding: 18px;
+    }
+
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2rem, 3vw, 2.7rem);
+      line-height: 1.1;
+      margin: 0 0 10px;
+      color: var(--ink);
+    }
+
+    .hero-sub {
+      color: var(--muted);
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+    }
+
+    .hero-callout {
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(17, 30, 54, 0.92), rgba(14, 36, 58, 0.92));
+      border: 1px solid rgba(117, 217, 255, 0.28);
+      padding: 14px;
+      color: rgba(234, 248, 255, 0.95);
+      font-family: 'Manrope', sans-serif;
+      font-size: 1rem;
+      line-height: 1.4;
+      min-height: 118px;
+    }
+
+    .stats {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat-card {
+      border-radius: 12px;
+      border: 1px solid rgba(117, 217, 255, 0.24);
+      background: var(--panel);
+      padding: 10px;
+    }
+
+    .stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4rem;
+      color: var(--ink);
+      line-height: 1;
+    }
+
+    .stat-label {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .board h2 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4rem;
+    }
+
+    .toolbar {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 130px 130px auto;
+      gap: 10px;
+    }
+
+    .field,
+    .button,
+    .nav-btn,
+    .chip {
+      border: 1px solid rgba(117, 217, 255, 0.3);
+      background: rgba(12, 23, 42, 0.9);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+
+    .button {
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(47, 123, 255, 0.35), rgba(57, 226, 159, 0.35));
+      font-weight: 700;
+    }
+
+    .section-title {
+      margin: 18px 0 10px;
+      font-family: 'Space Grotesk', sans-serif;
+      color: rgba(230, 245, 255, 0.96);
+      font-size: 1rem;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .reminder-card {
+      border-radius: 12px;
+      border: 1px solid rgba(117, 217, 255, 0.2);
+      background: rgba(7, 15, 30, 0.86);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .reminder-card.done {
+      border-color: rgba(57, 226, 159, 0.36);
+      opacity: 0.78;
+    }
+
+    .reminder-card.overdue:not(.done) {
+      border-color: rgba(255, 129, 129, 0.54);
+      box-shadow: 0 0 0 1px rgba(255, 129, 129, 0.24) inset;
+    }
+
+    .reminder-text {
+      font-size: 0.95rem;
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .reminder-card.done .reminder-text {
+      text-decoration: line-through;
+    }
+
+    .meta-row {
+      margin-top: 6px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--chip);
+    }
+
+    .chip.warn { border-color: rgba(255, 197, 106, 0.45); color: #ffd89a; }
+    .chip.ok { border-color: rgba(57, 226, 159, 0.45); color: #b2f9dc; }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .mini-btn {
+      border: 1px solid rgba(117, 217, 255, 0.3);
+      background: rgba(11, 21, 40, 0.94);
+      color: var(--ink);
+      border-radius: 9px;
+      padding: 7px 9px;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+
+    .empty {
+      border: 1px dashed rgba(117, 217, 255, 0.3);
+      border-radius: 12px;
+      padding: 18px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(10, 17, 33, 0.6);
+    }
+
+    .nav-row {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .page-wrap { padding: 18px; }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <main class="page-wrap">
+    <div class="layout">
+      <section class="shell">
+        <h1 class="hero-title">Your Reminder Studio</h1>
+        <p class="hero-sub" id="heroSub"></p>
+        <div class="hero-callout" id="heroCallout"></div>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value" id="pendingCount">0</div>
+            <div class="stat-label">Pending Nudges</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="doneCount">0</div>
+            <div class="stat-label">Completed Today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="overdueCount">0</div>
+            <div class="stat-label">Needs Attention</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="totalCount">0</div>
+            <div class="stat-label">Total Reminders</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="shell board">
+        <h2>Heads-Up Board</h2>
+        <div class="toolbar">
+          <input id="textInput" class="field" type="text" placeholder="What should I remind you about?">
+          <input id="timeInput" class="field" type="time" value="09:00">
+          <select id="tagInput" class="field" aria-label="Reminder category">
+            <option value="work">Work</option>
+            <option value="personal">Personal</option>
+            <option value="health">Health</option>
+            <option value="meeting">Meeting</option>
+          </select>
+          <button id="addBtn" class="button" type="button">Add Reminder</button>
+        </div>
+
+        <h3 class="section-title">Still On Deck</h3>
+        <div class="list" id="pendingList"></div>
+
+        <h3 class="section-title">Done And Dusted</h3>
+        <div class="list" id="doneList"></div>
+
+        <div class="nav-row">
+          <button class="nav-btn" type="button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const user = localStorage.getItem("rolebit_user");
+    if (!user) window.location.href = "signin.html";
+
+    const KEY = "rolebit_reminders_page";
+    const now = new Date();
+
+    function normalizeReminder(item) {
+      if (typeof item === "string") {
+        return { text: item, time: "09:00", tag: "work", done: false, completedAt: "" };
+      }
+      return {
+        text: String(item.text || "Reminder"),
+        time: String(item.time || "09:00"),
+        tag: String(item.tag || "work"),
+        done: Boolean(item.done),
+        completedAt: String(item.completedAt || "")
+      };
+    }
+
+    let reminders = JSON.parse(localStorage.getItem(KEY) || "[]").map(normalizeReminder);
+
+    if (!reminders.length) {
+      reminders = [
+        { text: "Team standup sync", time: "10:00", tag: "meeting", done: false, completedAt: "" },
+        { text: "Drink water and stretch", time: "11:30", tag: "health", done: true, completedAt: "09:15" }
+      ];
+    }
+
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(reminders));
+    }
+
+    function isOverdue(item) {
+      if (item.done) return false;
+      const nowHM = now.getHours() * 60 + now.getMinutes();
+      const parts = item.time.split(":");
+      const itemHM = Number(parts[0] || 0) * 60 + Number(parts[1] || 0);
+      return itemHM < nowHM;
+    }
+
+    function summaryText() {
+      const pending = reminders.filter((item) => !item.done);
+      const next = pending.sort((a, b) => a.time.localeCompare(b.time))[0];
+      if (!next) {
+        return "Clear slate. Every reminder is handled, great pace.";
+      }
+      return `Your next nudge is ${next.text} at ${next.time}. Keep the rhythm going.`;
+    }
+
+    function renderStats() {
+      const pending = reminders.filter((item) => !item.done).length;
+      const done = reminders.filter((item) => item.done).length;
+      const overdue = reminders.filter((item) => isOverdue(item)).length;
+
+      document.getElementById("pendingCount").textContent = String(pending);
+      document.getElementById("doneCount").textContent = String(done);
+      document.getElementById("overdueCount").textContent = String(overdue);
+      document.getElementById("totalCount").textContent = String(reminders.length);
+      document.getElementById("heroSub").textContent = `Hi ${user}, this board keeps every nudge intentional.`;
+      document.getElementById("heroCallout").textContent = summaryText();
+    }
+
+    function cardMarkup(item, index) {
+      const overdueClass = isOverdue(item) ? "overdue" : "";
+      const doneClass = item.done ? "done" : "";
+      const statusChip = item.done
+        ? `<span class="chip ok">Completed ${item.completedAt || "today"}</span>`
+        : `<span class="chip warn">${overdueClass ? "Overdue" : "Pending"}</span>`;
+
+      return `
+        <article class="reminder-card ${overdueClass} ${doneClass}">
+          <div>
+            <div class="reminder-text">${item.text}</div>
+            <div class="meta-row">
+              <span class="chip">${item.time}</span>
+              <span class="chip">${item.tag}</span>
+              ${statusChip}
+            </div>
+          </div>
+          <div class="actions">
+            ${item.done ? "" : `<button class="mini-btn" data-action="snooze" data-index="${index}">+15 min</button>`}
+            <button class="mini-btn" data-action="toggle" data-index="${index}">${item.done ? "Undo" : "Done"}</button>
+            <button class="mini-btn" data-action="remove" data-index="${index}">Remove</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderLists() {
+      const pendingList = document.getElementById("pendingList");
+      const doneList = document.getElementById("doneList");
+
+      const pending = reminders.filter((item) => !item.done);
+      const done = reminders.filter((item) => item.done);
+
+      pendingList.innerHTML = pending.length
+        ? pending.map((item) => cardMarkup(item, reminders.indexOf(item))).join("")
+        : '<div class="empty">No pending reminders. You are fully caught up.</div>';
+
+      doneList.innerHTML = done.length
+        ? done.map((item) => cardMarkup(item, reminders.indexOf(item))).join("")
+        : '<div class="empty">Nothing completed yet. Mark one done to build momentum.</div>';
+    }
+
+    function renderAll() {
+      renderStats();
+      renderLists();
+      save();
+    }
+
+    document.getElementById("addBtn").addEventListener("click", () => {
+      const text = document.getElementById("textInput").value.trim();
+      const time = document.getElementById("timeInput").value || "09:00";
+      const tag = document.getElementById("tagInput").value || "work";
+      if (!text) return;
+
+      reminders.unshift({ text, time, tag, done: false, completedAt: "" });
+      document.getElementById("textInput").value = "";
+      renderAll();
+    });
+
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-action]");
+      if (!btn) return;
+      const index = Number(btn.dataset.index || -1);
+      if (index < 0 || !reminders[index]) return;
+
+      if (btn.dataset.action === "remove") {
+        reminders.splice(index, 1);
+      }
+
+      if (btn.dataset.action === "toggle") {
+        reminders[index].done = !reminders[index].done;
+        reminders[index].completedAt = reminders[index].done
+          ? `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`
+          : "";
+      }
+
+      if (btn.dataset.action === "snooze") {
+        const parts = reminders[index].time.split(":");
+        const total = Number(parts[0] || 0) * 60 + Number(parts[1] || 0) + 15;
+        const hours = String(Math.floor((total / 60) % 24)).padStart(2, "0");
+        const mins = String(total % 60).padStart(2, "0");
+        reminders[index].time = `${hours}:${mins}`;
+      }
+
+      renderAll();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>

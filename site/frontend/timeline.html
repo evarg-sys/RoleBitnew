@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Timeline</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: rgba(118, 216, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 30px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .panel {
+      max-width: 980px;
+      background: rgba(18, 30, 50, 0.84);
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      border-radius: 18px;
+      padding: 22px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3.6vw, 2.8rem);
+      font-family: 'Space Grotesk', sans-serif;
+      color: rgba(241, 248, 255, 0.97);
+    }
+
+    .subtitle {
+      margin: 10px 0 16px;
+      color: rgba(206, 229, 247, 0.84);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .pill-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pill-btn.active {
+      background: rgba(67, 118, 170, 0.54);
+      color: rgba(238, 248, 255, 0.98);
+      border-color: rgba(141, 217, 255, 0.72);
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item {
+      padding: 12px;
+      border-left: 3px solid rgba(100, 200, 255, 0.85);
+      border-radius: 12px;
+      background: rgba(8, 15, 28, 0.78);
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 12px;
+      align-items: start;
+      border: 1px solid rgba(118, 216, 255, 0.16);
+    }
+
+    .item.done {
+      border-left-color: rgba(72, 224, 166, 0.9);
+    }
+
+    .date {
+      font-weight: 700;
+      color: rgba(100, 200, 255, 0.95);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .task {
+      color: rgba(241, 248, 255, 0.96);
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+
+    .project {
+      opacity: 0.82;
+      margin-top: 2px;
+      font-size: 0.84rem;
+      color: rgba(178, 211, 242, 0.9);
+    }
+
+    .owner {
+      margin-top: 3px;
+      font-size: 0.8rem;
+      color: rgba(157, 195, 230, 0.8);
+    }
+
+    .status-pill {
+      border: 1px solid rgba(118, 216, 255, 0.34);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.76rem;
+      color: rgba(230, 245, 255, 0.95);
+      background: rgba(12, 21, 38, 0.9);
+    }
+
+    .status-pill.done {
+      border-color: rgba(72, 224, 166, 0.42);
+      color: rgba(191, 255, 227, 0.96);
+    }
+
+    .nav-row {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .empty {
+      border: 1px dashed rgba(118, 216, 255, 0.3);
+      border-radius: 12px;
+      padding: 18px;
+      color: rgba(202, 227, 247, 0.86);
+      text-align: center;
+      background: rgba(8, 13, 24, 0.62);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 860px) {
+      .page-wrap {
+        padding: 18px;
+      }
+
+      .item {
+        grid-template-columns: 1fr;
+      }
+
+      .status-pill {
+        width: fit-content;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h1>Timeline</h1>
+      <p class="subtitle" id="timelineSubtitle"></p>
+      <div class="filters" id="timelineFilters">
+        <button class="pill-btn active" type="button" data-filter="all">All</button>
+        <button class="pill-btn" type="button" data-filter="pending">Pending</button>
+        <button class="pill-btn" type="button" data-filter="done">Done</button>
+      </div>
+      <div class="timeline" id="timelineList"></div>
+      <div class="nav-row">
+        <button class="pill-btn" type="button" onclick="window.location.href='todo.html'">Open To-Do Page</button>
+        <button class="pill-btn" type="button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const user = localStorage.getItem("rolebit_user");
+    if (!user) window.location.href = "signin.html";
+
+    const API = "http://localhost:3000";
+    let activeFilter = "all";
+    let timelineItems = [];
+
+    function formatDeadline(value) {
+      if (!value) return "No date";
+      const parsed = new Date(value + "T00:00:00");
+      if (Number.isNaN(parsed.getTime())) return value;
+      return parsed.toLocaleDateString("default", { month: "short", day: "numeric" });
+    }
+
+    function matchesFilter(item) {
+      if (activeFilter === "all") return true;
+      if (activeFilter === "pending") return !item.completed;
+      if (activeFilter === "done") return item.completed;
+      return true;
+    }
+
+    function renderFilters() {
+      document.querySelectorAll("#timelineFilters .pill-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.filter === activeFilter);
+      });
+    }
+
+    function renderTimeline() {
+      const list = document.getElementById("timelineList");
+      const filtered = timelineItems.filter(matchesFilter);
+
+      if (!filtered.length) {
+        list.innerHTML = '<div class="empty">No timeline entries for this filter yet.</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map((item) => `
+        <article class="item ${item.completed ? "done" : ""}">
+          <div class="date">${formatDeadline(item.due)}</div>
+          <div>
+            <div class="task">${item.task}</div>
+            <div class="project">in ${item.project}</div>
+            <div class="owner">Owner: ${item.owner || "Unassigned"}</div>
+          </div>
+          <div class="status-pill ${item.completed ? "done" : ""}">${item.completed ? `Done${item.completedBy ? ` by ${item.completedBy}` : ""}` : "In Progress"}</div>
+        </article>
+      `).join("");
+    }
+
+    async function loadTimeline() {
+      try {
+        const response = await fetch(`${API}/projects?username=${encodeURIComponent(user)}`);
+        if (!response.ok) throw new Error("Failed to load");
+        const data = await response.json();
+        const projects = Array.isArray(data.projects) ? data.projects : [];
+
+        timelineItems = projects.flatMap((project) => {
+          const steps = Array.isArray(project.timeline) ? project.timeline : [];
+          return steps.map((step) => ({
+            task: step.task || "",
+            owner: step.owner || "",
+            due: step.due || project.deadline || "",
+            completed: Boolean(step.completed),
+            completedBy: step.completedBy || "",
+            project: project.title || "Project"
+          }));
+        }).sort((a, b) => {
+          const ad = a.due || "9999-12-31";
+          const bd = b.due || "9999-12-31";
+          return ad.localeCompare(bd);
+        });
+      } catch (_err) {
+        timelineItems = [
+          { task: "Finalize sprint plan", owner: user, due: "2026-04-16", completed: false, completedBy: "", project: "RoleBit Dashboard" },
+          { task: "Run staging tests", owner: "Devon", due: "2026-04-20", completed: false, completedBy: "", project: "API Integration" },
+          { task: "Approve mobile QA", owner: "Nina", due: "2026-04-18", completed: true, completedBy: "Nina", project: "Website Redesign" }
+        ];
+      }
+
+      document.getElementById("timelineSubtitle").textContent = `Hi ${user}, this is your live timeline across private and shared projects.`;
+      renderFilters();
+      renderTimeline();
+    }
+
+    document.getElementById("timelineFilters").addEventListener("click", (event) => {
+      const button = event.target.closest(".pill-btn[data-filter]");
+      if (!button) return;
+      activeFilter = button.dataset.filter;
+      renderFilters();
+      renderTimeline();
+    });
+
+    loadTimeline();
+  </script>
+</body>
+</html>

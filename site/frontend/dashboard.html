@@ -3,11 +3,63 @@
 <head>
   <title>Rolebit – Dashboard</title>
   <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
   <style>
-    html, body {
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
       min-height: 100%;
       overflow-x: hidden;
       overflow-y: auto;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover {
+      border-color: rgba(118, 216, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
     }
 
     /* Dashboard-specific styles */
@@ -15,7 +67,7 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 30px;
-      margin-left: 70px;
+      margin-left: 84px;
       padding: 40px 60px;
       min-height: 100vh;
       height: auto;
@@ -24,8 +76,14 @@
       transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
+    .dashboard-main,
+    .top-right-logout-btn {
+      position: relative;
+      z-index: 1;
+    }
+
     .sidebar:hover ~ .dashboard-container {
-      margin-left: 220px;
+      margin-left: 234px;
     }
 
 
@@ -92,21 +150,23 @@
     }
 
     .add-project-btn {
-      background: rgba(100, 200, 255, 0.2);
-      border: 1px solid rgba(100, 200, 255, 0.4);
-      color: rgba(100, 200, 255, 0.95);
-      padding: 10px 20px;
-      border-radius: 10px;
+      background: rgba(47, 88, 130, 0.34);
+      border: 1.3px solid rgba(111, 201, 255, 0.54);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      border-radius: 999px;
       cursor: pointer;
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       transition: all 0.3s ease;
     }
 
     .add-project-btn:hover {
-      background: rgba(100, 200, 255, 0.3);
-      border-color: rgba(100, 200, 255, 0.6);
-      box-shadow: 0 0 12px rgba(100, 200, 255, 0.25);
+      background: rgba(71, 124, 178, 0.5);
+      color: rgba(238, 248, 255, 0.98);
+      border-color: rgba(141, 217, 255, 0.72);
+      box-shadow: 0 8px 20px rgba(12, 25, 44, 0.4);
     }
 
     .projects-grid {
@@ -133,19 +193,21 @@
     }
 
     .widget-select {
-      background: rgba(30, 38, 60, 0.8);
-      border: 1px solid rgba(100, 200, 255, 0.35);
-      color: rgba(225, 235, 255, 0.95);
-      border-radius: 10px;
-      padding: 10px 14px;
+      background: rgba(34, 66, 102, 0.42);
+      border: 1.2px solid rgba(116, 202, 255, 0.56);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 8px 16px;
       min-width: 150px;
+      font-size: 0.9rem;
     }
 
     .widgets-workspace {
       border: none;
       border-radius: 18px;
       padding: 0;
-      background: linear-gradient(160deg, rgba(14, 20, 35, 0.75), rgba(10, 15, 28, 0.6));
+      background: transparent;
       max-height: none;
       overflow: hidden;
       box-shadow: none;
@@ -175,6 +237,7 @@
       border: 1px solid rgba(100, 200, 255, 0.15);
       border-radius: 16px;
       padding: 18px;
+      padding-bottom: 56px;
       backdrop-filter: blur(15px);
       transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
       cursor: grab;
@@ -301,6 +364,24 @@
       gap: 8px;
     }
 
+    .widget-footer-actions {
+      position: absolute;
+      left: 12px;
+      right: 32px;
+      bottom: 10px;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+
+    .widget-footer-actions .small-action-btn {
+      pointer-events: auto;
+      max-width: 100%;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
     .widget-title {
       font-size: 1rem;
       font-weight: 700;
@@ -352,13 +433,20 @@
 
     .timer-controls button,
     .small-action-btn {
-      background: rgba(100, 200, 255, 0.15);
-      border: 1px solid rgba(100, 200, 255, 0.35);
-      color: rgba(225, 240, 255, 0.95);
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 0.8rem;
+      background: rgba(47, 88, 130, 0.34);
+      border: 1.15px solid rgba(111, 201, 255, 0.52);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
       cursor: pointer;
+    }
+
+    .small-action-btn:hover {
+      background: rgba(71, 124, 178, 0.5);
+      color: rgba(238, 248, 255, 0.98);
+      border-color: rgba(141, 217, 255, 0.72);
     }
 
     .timer-controls input {
@@ -631,8 +719,29 @@
     /* Timeline Section */
     .timeline-section h2 {
       font-size: 1.5rem;
-      margin-bottom: 30px;
+      margin-bottom: 0;
       color: white;
+    }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .top-right-logout-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     .timeline {
@@ -1005,7 +1114,10 @@
 
     <!-- Timeline Section -->
     <section class="timeline-section">
-      <h2>Timeline & Upcoming Tasks</h2>
+      <div class="timeline-header">
+        <h2>Timeline & Upcoming Tasks</h2>
+        <button type="button" class="small-action-btn" data-action="open-timeline-page">Open Timeline Page</button>
+      </div>
       <div class="timeline" id="timelineList">
         <!-- Timeline will load here -->
       </div>
@@ -1028,6 +1140,12 @@
   const WIDGETS_STORAGE_KEY = "rolebit_dashboard_widgets_v2";
   const GRID_GAP = 14;
   const ROW_UNIT = 28;
+  const WIDGET_REDIRECTS = {
+    timer: "focus-timer.html",
+    calendar: "calendar.html",
+    reminders: "reminders.html",
+    activity: "timeline.html"
+  };
 
   const mockTimeline = [
     { date: "Mar 2", task: "Design review", project: "Website Redesign", status: "completed" },
@@ -1212,6 +1330,9 @@
   }
 
   function getWidgetMarkup(widget) {
+    const redirectPage = getWidgetRedirectPage(widget);
+    const redirectLabel = getWidgetRedirectLabel(widget);
+
     if (widget.type === "timer") {
       return `
         <div class="timer-display" data-timer-display="${widget.id}">${formatDuration(widget.state?.secondsLeft || 0)}</div>
@@ -1221,6 +1342,9 @@
           <button type="button" data-action="timer-reset">Reset</button>
           <input type="number" min="1" max="180" value="25" data-action="timer-minutes" aria-label="Timer minutes">
           <button type="button" data-action="timer-apply">Set</button>
+        </div>
+        <div class="widget-footer-actions">
+          <button type="button" class="small-action-btn" data-action="widget-open-page" data-page="${redirectPage}">${redirectLabel}</button>
         </div>
       `;
     }
@@ -1236,6 +1360,9 @@
             </div>
           `).join("")}
           <button type="button" class="small-action-btn" data-action="activity-add">Add Stat</button>
+          <div class="widget-footer-actions">
+            <button type="button" class="small-action-btn" data-action="widget-open-page" data-page="${redirectPage}">${redirectLabel}</button>
+          </div>
         </div>
       `;
     }
@@ -1247,6 +1374,9 @@
         <input class="widget-tag-input" value="${escapeHtml(widget.tags || "")}" data-action="task-tags" aria-label="Task tags">
         <div class="task-card-footer">
           ${(widget.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 4).map((tag) => `<span class="task-tag work">${escapeHtml(tag)}</span>`).join("")}
+        </div>
+        <div class="widget-footer-actions">
+          <button type="button" class="small-action-btn" data-action="widget-open-page" data-page="${redirectPage}">${redirectLabel}</button>
         </div>
       `;
     }
@@ -1265,6 +1395,9 @@
           <div class="calendar-month">${calendar.title}</div>
           <div class="calendar-grid">${calendar.daysMarkup}</div>
           <div class="calendar-selected">${selected}</div>
+          <div class="widget-footer-actions">
+            <button type="button" class="small-action-btn" data-action="widget-open-page" data-page="${redirectPage}">${redirectLabel}</button>
+          </div>
         </div>
       `;
     }
@@ -1280,6 +1413,9 @@
             </div>
           `).join("")}
           <button type="button" class="small-action-btn" data-action="reminder-add">Add Reminder</button>
+          <div class="widget-footer-actions">
+            <button type="button" class="small-action-btn" data-action="widget-open-page" data-page="${redirectPage}">${redirectLabel}</button>
+          </div>
         </div>
       `;
     }
@@ -1311,6 +1447,26 @@
         <div class="widget-resize-handle" title="Resize widget"></div>
       </article>
     `).join("");
+  }
+
+  function getWidgetRedirectPage(widget) {
+    if (!widget) return "dashboard.html";
+    if (widget.type === "task") {
+      const title = String(widget.title || "").toLowerCase();
+      return title.includes("meeting") ? "meeting-info.html" : "todo.html";
+    }
+    return WIDGET_REDIRECTS[widget.type] || "dashboard.html";
+  }
+
+  function getWidgetRedirectLabel(widget) {
+    const target = getWidgetRedirectPage(widget);
+    if (target === "meeting-info.html") return "Open Meeting Page";
+    if (target === "todo.html") return "Open To-Do Page";
+    if (target === "focus-timer.html") return "Open Focus Timer";
+    if (target === "calendar.html") return "Open Calendar Page";
+    if (target === "reminders.html") return "Open Reminders Page";
+    if (target === "timeline.html") return "Open Timeline Page";
+    return "Open Page";
   }
 
   function renderTimeline() {
@@ -1638,6 +1794,17 @@
       widget.reminders.push({ text: "New reminder", time: "09:00" });
       saveWidgets();
       rerenderAllWidgets();
+    }
+
+    if (action === "widget-open-page") {
+      const targetPage = actionEl.dataset.page || getWidgetRedirectPage(widget);
+      if (targetPage) {
+        window.location.href = targetPage;
+      }
+    }
+
+    if (action === "open-timeline-page") {
+      window.location.href = "timeline.html";
     }
   });
 
