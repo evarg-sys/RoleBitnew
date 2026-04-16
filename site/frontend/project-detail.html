@@ -188,6 +188,76 @@
       font-size: 0.85rem;
     }
 
+    .github-integration-shell,
+    .github-dashboard-shell {
+      display: grid;
+      gap: 10px;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .github-integration-header {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .github-integration-header h3,
+    .github-integration-header h2 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .github-actions,
+    .github-repo-actions,
+    .github-commit-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .github-repo-card,
+    .github-commit-card {
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      border-radius: 12px;
+      background: rgba(8, 17, 31, 0.65);
+      padding: 10px;
+    }
+
+    .github-repo-title,
+    .github-commit-title {
+      font-weight: 700;
+      color: rgba(240, 248, 255, 0.96);
+      margin-bottom: 4px;
+    }
+
+    .github-repo-meta,
+    .github-commit-meta,
+    .github-status,
+    .github-file-item,
+    .github-empty {
+      color: rgba(201, 229, 249, 0.88);
+      font-size: 0.84rem;
+    }
+
+    .github-file-list {
+      margin-top: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .github-commit-toolbar select,
+    .github-commit-toolbar input {
+      border: 1px solid rgba(130, 202, 255, 0.3);
+      background: rgba(8, 14, 28, 0.88);
+      color: rgba(236, 246, 255, 0.96);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+
     @media (max-width: 860px) {
       .grid { grid-template-columns: 1fr; }
       .page-wrap { padding: 16px; }
@@ -211,10 +281,13 @@
 
       <div id="projectFormArea"></div>
       <div id="statusText" class="status">Loading project...</div>
+
+      <section id="githubIntegrationArea" class="timeline-preview" style="margin-top:14px;"></section>
     </section>
   </main>
 
   <script src="script.js"></script>
+  <script src="github-integration.js"></script>
   <script>
     const user = localStorage.getItem("rolebit_user");
     if (!user) window.location.href = "signin.html";
@@ -443,6 +516,10 @@
     });
 
     loadProject();
+    initGithubProjectIntegration({
+      containerId: "githubIntegrationArea",
+      projectId
+    });
   </script>
 </body>
 </html>

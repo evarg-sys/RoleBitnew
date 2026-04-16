@@ -1124,6 +1124,10 @@
         <!-- Timeline will load here -->
       </div>
     </section>
+
+    <section class="timeline-section">
+      <div id="dashboardGithubArea"></div>
+    </section>
   </div>
 
   <!-- Logout Button -->
@@ -1133,6 +1137,7 @@
 </div>
 
 <script src="script.js"></script>
+<script src="github-integration.js"></script>
 <script>
   const user = localStorage.getItem("rolebit_user");
   if (!user) {
@@ -1872,6 +1877,7 @@
   displayMotivationalMessage();
   renderTimeline();
   rerenderAllWidgets();
+  initGithubDashboard({ containerId: "dashboardGithubArea" });
   window.setInterval(tickTimers, 1000);
 </script>
 

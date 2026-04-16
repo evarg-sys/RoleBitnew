@@ -2,24 +2,23 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-const { open } = require("lmdb");
+const store = require("./services/lmdbStore");
+const githubRoutes = require("./routes/github");
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString("utf8");
+  }
+}));
 
 const USERS_FILE = path.join(__dirname, "users.json");
-const LMDB_PATH = path.join(__dirname, "rolebit.lmdb");
 const LEGACY_SQLITE_PATH = path.join(__dirname, "rolebit.db");
 
 if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, "[]", "utf8");
 }
-
-const store = open({
-  path: LMDB_PATH,
-  compression: true
-});
 
 function readUsers() {
   return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
@@ -303,6 +302,8 @@ function migrateFromLegacySqlite() {
 
 migrateFromLegacySqlite();
 seedProjectsIfEmpty();
+
+app.use("/api/github", githubRoutes);
 
 app.post("/signup", (req, res) => {
   const { username, password } = req.body;
