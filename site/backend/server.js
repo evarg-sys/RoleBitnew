@@ -46,7 +46,38 @@ CREATE TABLE IF NOT EXISTS project_timeline (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS project_members (
+  project_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(project_id, username),
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
 `);
+
+function hasColumn(tableName, columnName) {
+  const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  return rows.some((row) => row.name === columnName);
+}
+
+function ensureProjectSchema() {
+  if (!hasColumn("projects", "lifecycle_stage")) {
+    db.exec("ALTER TABLE projects ADD COLUMN lifecycle_stage TEXT DEFAULT 'Planning'");
+  }
+  if (!hasColumn("projects", "course")) {
+    db.exec("ALTER TABLE projects ADD COLUMN course TEXT DEFAULT 'General Studies'");
+  }
+  if (!hasColumn("projects", "git_repo_url")) {
+    db.exec("ALTER TABLE projects ADD COLUMN git_repo_url TEXT DEFAULT ''");
+  }
+  if (!hasColumn("projects", "git_branch")) {
+    db.exec("ALTER TABLE projects ADD COLUMN git_branch TEXT DEFAULT 'main'");
+  }
+  if (!hasColumn("projects", "git_notes")) {
+    db.exec("ALTER TABLE projects ADD COLUMN git_notes TEXT DEFAULT ''");
+  }
+}
 
 function readUsers() {
   return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
@@ -56,13 +87,47 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
 }
 
+function getMembersByProjectId(projectId) {
+  return db.prepare(`
+    SELECT username
+    FROM project_members
+    WHERE project_id = ?
+    ORDER BY username ASC
+  `).all(projectId).map((row) => row.username);
+}
+
+function setMembersForProject(projectId, members, ownerUsername) {
+  const safeMembers = Array.isArray(members) ? members : [];
+  const normalized = new Set();
+
+  safeMembers.forEach((member) => {
+    const value = String(member || "").trim();
+    if (value) normalized.add(value);
+  });
+
+  if (ownerUsername) {
+    normalized.add(String(ownerUsername).trim());
+  }
+
+  db.prepare("DELETE FROM project_members WHERE project_id = ?").run(projectId);
+
+  const insertStmt = db.prepare(`
+    INSERT INTO project_members (project_id, username)
+    VALUES (?, ?)
+  `);
+
+  Array.from(normalized).forEach((username) => {
+    insertStmt.run(projectId, username);
+  });
+}
+
 function seedProjectsIfEmpty() {
   const count = db.prepare("SELECT COUNT(*) AS c FROM projects").get().c;
   if (count > 0) return;
 
   const insertProject = db.prepare(`
-    INSERT INTO projects (title, owner_username, summary, status, deadline, progress, visibility, team, priority, risk)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO projects (title, owner_username, summary, status, deadline, progress, visibility, team, priority, risk, course, git_repo_url, git_branch, git_notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertTimeline = db.prepare(`
@@ -82,6 +147,10 @@ function seedProjectsIfEmpty() {
       team: "Team: 5 people",
       priority: "Priority: High",
       risk: "Risk: Tight content timeline",
+      course: "Computer Science",
+      gitRepoUrl: "",
+      gitBranch: "main",
+      gitNotes: "",
       timeline: [
         ["Finalize hero interaction", "Ari", "Apr 18", 1, "Ari"],
         ["Approve mobile QA", "Nina", "Apr 20", 1, "Nina"],
@@ -99,6 +168,10 @@ function seedProjectsIfEmpty() {
       team: "Team: 3 people",
       priority: "Priority: Medium",
       risk: "Risk: Payment retries",
+      course: "Software Engineering",
+      gitRepoUrl: "",
+      gitBranch: "main",
+      gitNotes: "",
       timeline: [
         ["Finish payment webhook", "Eric", "Apr 21", 1, "Eric"],
         ["Audit API logs", "Marta", "Apr 24", 0, ""],
@@ -118,7 +191,11 @@ function seedProjectsIfEmpty() {
       project.visibility,
       project.team,
       project.priority,
-      project.risk
+      project.risk,
+      project.course,
+      project.gitRepoUrl,
+      project.gitBranch,
+      project.gitNotes
     );
 
     project.timeline.forEach((step) => {
@@ -156,10 +233,17 @@ function projectRowToResponse(row) {
     team: row.team,
     priority: row.priority,
     risk: row.risk,
+    course: row.course || "General Studies",
+    gitRepoUrl: row.git_repo_url || "",
+    gitBranch: row.git_branch || "main",
+    gitNotes: row.git_notes || "",
+    lifecycleStage: row.lifecycle_stage || "Planning",
+    members: getMembersByProjectId(row.id),
     timeline: getTimelineByProjectId(row.id)
   };
 }
 
+ensureProjectSchema();
 seedProjectsIfEmpty();
 
 app.post("/signup", (req, res) => {
@@ -184,6 +268,15 @@ app.post("/login", (req, res) => {
   res.json({ success: true, username });
 });
 
+app.get("/users", (_req, res) => {
+  const users = readUsers()
+    .map((item) => String(item.username || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  res.json({ users });
+});
+
 app.get("/projects", (req, res) => {
   const username = String(req.query.username || "").trim();
   if (!username) {
@@ -193,11 +286,40 @@ app.get("/projects", (req, res) => {
   const rows = db.prepare(`
     SELECT *
     FROM projects
-    WHERE owner_username = ? OR visibility = 'shared'
+    WHERE owner_username = ?
+      OR visibility = 'shared'
+      OR EXISTS (
+        SELECT 1
+        FROM project_members pm
+        WHERE pm.project_id = projects.id AND pm.username = ?
+      )
     ORDER BY datetime(updated_at) DESC, id DESC
-  `).all(username);
+  `).all(username, username);
 
   res.json({ projects: rows.map(projectRowToResponse) });
+});
+
+app.get("/projects/:id", (req, res) => {
+  const projectId = Number(req.params.id);
+  const username = String(req.query.username || "").trim();
+
+  if (!username) {
+    return res.status(400).json({ error: "username query parameter is required" });
+  }
+
+  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
+  if (!row) return res.status(404).json({ error: "Project not found" });
+
+  const canAccess =
+    row.owner_username === username ||
+    row.visibility === "shared" ||
+    db.prepare("SELECT 1 AS ok FROM project_members WHERE project_id = ? AND username = ? LIMIT 1").get(projectId, username);
+
+  if (!canAccess) {
+    return res.status(403).json({ error: "Access denied" });
+  }
+
+  res.json({ project: projectRowToResponse(row) });
 });
 
 app.post("/projects", (req, res) => {
@@ -209,9 +331,15 @@ app.post("/projects", (req, res) => {
     deadline = "",
     progress = 0,
     visibility = "private",
+    lifecycleStage = "Planning",
+    members = [],
     team = "Team: 1 person",
     priority = "Priority: Medium",
     risk = "Risk: None",
+    course = "General Studies",
+    gitRepoUrl = "",
+    gitBranch = "main",
+    gitNotes = "",
     timeline = []
   } = req.body;
 
@@ -223,9 +351,11 @@ app.post("/projects", (req, res) => {
   const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
 
   const result = db.prepare(`
-    INSERT INTO projects (title, owner_username, summary, status, deadline, progress, visibility, team, priority, risk, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-  `).run(title, username, summary, status, deadline, safeProgress, safeVisibility, team, priority, risk);
+    INSERT INTO projects (title, owner_username, summary, status, deadline, progress, visibility, lifecycle_stage, team, priority, risk, course, git_repo_url, git_branch, git_notes, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `).run(title, username, summary, status, deadline, safeProgress, safeVisibility, lifecycleStage, team, priority, risk, course, gitRepoUrl, gitBranch, gitNotes);
+
+  setMembersForProject(result.lastInsertRowid, members, username);
 
   if (Array.isArray(timeline) && timeline.length) {
     const insertTimeline = db.prepare(`
@@ -260,9 +390,15 @@ app.put("/projects/:id", (req, res) => {
     deadline,
     progress,
     visibility,
+    lifecycleStage,
+    members,
     team,
     priority,
-    risk
+    risk,
+    course,
+    gitRepoUrl,
+    gitBranch,
+    gitNotes
   } = req.body;
 
   const existing = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
@@ -277,7 +413,7 @@ app.put("/projects/:id", (req, res) => {
   db.prepare(`
     UPDATE projects
     SET title = ?, summary = ?, status = ?, deadline = ?, progress = ?, visibility = ?,
-        team = ?, priority = ?, risk = ?, updated_at = CURRENT_TIMESTAMP
+      lifecycle_stage = ?, team = ?, priority = ?, risk = ?, course = ?, git_repo_url = ?, git_branch = ?, git_notes = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
     String(title || existing.title),
@@ -286,11 +422,20 @@ app.put("/projects/:id", (req, res) => {
     String(deadline || ""),
     safeProgress,
     safeVisibility,
+    String(lifecycleStage || "Planning"),
     String(team || "Team: 1 person"),
     String(priority || "Priority: Medium"),
     String(risk || "Risk: None"),
+    String(course || "General Studies"),
+    String(gitRepoUrl || ""),
+    String(gitBranch || "main"),
+    String(gitNotes || ""),
     projectId
   );
+
+  if (Array.isArray(members)) {
+    setMembersForProject(projectId, members, existing.owner_username);
+  }
 
   const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
   res.json({ success: true, project: projectRowToResponse(row) });
