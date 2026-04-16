@@ -116,15 +116,11 @@
     }
 
     .agenda-banner {
-      border-radius: 14px;
-      border: 1px solid rgba(126, 200, 255, 0.34);
-      background: linear-gradient(132deg, rgba(16, 31, 58, 0.95), rgba(15, 37, 50, 0.95));
-      padding: 14px;
-      min-height: 118px;
       font-size: 1.02rem;
       color: rgba(233, 245, 255, 0.96);
-      line-height: 1.4;
+      line-height: 1.5;
       font-family: 'IBM Plex Sans', sans-serif;
+      margin: 0;
     }
 
     .stats {
@@ -331,6 +327,8 @@
     <img src="logo.png" class="logo-img" alt="Rolebit Logo">
     <a href="dashboard.html">Dashboard</a>
     <a href="my-projects.html">My Projects</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="timeline.html">Timeline</a>
     <a href="index.html">Home</a>
   </div>
 
@@ -339,7 +337,7 @@
       <section class="frame">
         <h1 class="hero-title">Today's Agenda</h1>
         <p class="hero-copy" id="heroCopy"></p>
-        <div class="agenda-banner" id="agendaBanner"></div>
+        <p class="agenda-banner" id="agendaBanner"></p>
 
         <div class="stats">
           <article class="stat">
@@ -445,7 +443,7 @@
       }
 
       const dueCopy = next.due ? ` by ${next.due}` : "";
-      return `Next move: ${next.text}${dueCopy}. Keep it sharp and finish strong.`;
+      return `Next move: \"${next.text}\"${dueCopy}. Keep it sharp and finish strong.`;
     }
 
     function matchesFilter(item) {
@@ -485,7 +483,7 @@
       document.getElementById("doneCount").textContent = String(done);
       document.getElementById("highCount").textContent = String(high);
       document.getElementById("progressPct").textContent = `${pct}%`;
-      document.getElementById("heroCopy").textContent = `Hi ${user}, this is your conversational command center for execution.`;
+      document.getElementById("heroCopy").textContent = `Hi ${user}, this board keeps execution intentional.`;
       document.getElementById("agendaBanner").textContent = selectAgendaLine();
     }
 

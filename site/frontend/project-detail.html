@@ -219,7 +219,7 @@
     const user = localStorage.getItem("rolebit_user");
     if (!user) window.location.href = "signin.html";
 
-    const API = "http://localhost:3000";
+    const PROJECTS_API = "http://localhost:3000";
     const params = new URLSearchParams(window.location.search);
     const projectId = params.get("projectId") || localStorage.getItem("rolebit_last_created_project_id") || "";
     const cachedProjectPayloadRaw = localStorage.getItem("rolebit_last_created_project_payload");
@@ -362,7 +362,7 @@
 
       try {
         let loaded = null;
-        const listResponse = await fetchWithTimeout(`${API}/projects?username=${encodeURIComponent(user)}`);
+        const listResponse = await fetchWithTimeout(`${PROJECTS_API}/projects?username=${encodeURIComponent(user)}`);
         if (!listResponse.ok) throw new Error("Failed to load project list");
         const listData = await listResponse.json();
         const projects = Array.isArray(listData.projects) ? listData.projects : [];
@@ -370,7 +370,7 @@
 
         if (!loaded) {
           try {
-            const response = await fetchWithTimeout(`${API}/projects/${encodeURIComponent(projectId)}?username=${encodeURIComponent(user)}`);
+            const response = await fetchWithTimeout(`${PROJECTS_API}/projects/${encodeURIComponent(projectId)}?username=${encodeURIComponent(user)}`);
             if (response.ok) {
               const data = await response.json();
               loaded = data.project || null;
@@ -422,7 +422,7 @@
 
       try {
         document.getElementById("statusText").textContent = "Saving project...";
-        const response = await fetch(`${API}/projects/${encodeURIComponent(projectId)}`, {
+        const response = await fetch(`${PROJECTS_API}/projects/${encodeURIComponent(projectId)}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)

@@ -2,82 +2,24 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-const { DatabaseSync } = require("node:sqlite");
+const { open } = require("lmdb");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const USERS_FILE = path.join(__dirname, "users.json");
-const DB_FILE = path.join(__dirname, "rolebit.db");
+const LMDB_PATH = path.join(__dirname, "rolebit.lmdb");
+const LEGACY_SQLITE_PATH = path.join(__dirname, "rolebit.db");
 
 if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, "[]", "utf8");
 }
 
-const db = new DatabaseSync(DB_FILE);
-db.exec("PRAGMA foreign_keys = ON");
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS projects (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  owner_username TEXT NOT NULL,
-  summary TEXT DEFAULT '',
-  status TEXT DEFAULT 'In Progress',
-  deadline TEXT DEFAULT '',
-  progress INTEGER DEFAULT 0,
-  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'shared')),
-  team TEXT DEFAULT 'Team: 1 person',
-  priority TEXT DEFAULT 'Priority: Medium',
-  risk TEXT DEFAULT 'Risk: None',
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS project_timeline (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id INTEGER NOT NULL,
-  task TEXT NOT NULL,
-  task_owner TEXT DEFAULT '',
-  due TEXT DEFAULT '',
-  completed INTEGER NOT NULL DEFAULT 0,
-  completed_by TEXT DEFAULT '',
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS project_members (
-  project_id INTEGER NOT NULL,
-  username TEXT NOT NULL,
-  added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY(project_id, username),
-  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
-`);
-
-function hasColumn(tableName, columnName) {
-  const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
-  return rows.some((row) => row.name === columnName);
-}
-
-function ensureProjectSchema() {
-  if (!hasColumn("projects", "lifecycle_stage")) {
-    db.exec("ALTER TABLE projects ADD COLUMN lifecycle_stage TEXT DEFAULT 'Planning'");
-  }
-  if (!hasColumn("projects", "course")) {
-    db.exec("ALTER TABLE projects ADD COLUMN course TEXT DEFAULT 'General Studies'");
-  }
-  if (!hasColumn("projects", "git_repo_url")) {
-    db.exec("ALTER TABLE projects ADD COLUMN git_repo_url TEXT DEFAULT ''");
-  }
-  if (!hasColumn("projects", "git_branch")) {
-    db.exec("ALTER TABLE projects ADD COLUMN git_branch TEXT DEFAULT 'main'");
-  }
-  if (!hasColumn("projects", "git_notes")) {
-    db.exec("ALTER TABLE projects ADD COLUMN git_notes TEXT DEFAULT ''");
-  }
-}
+const store = open({
+  path: LMDB_PATH,
+  compression: true
+});
 
 function readUsers() {
   return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
@@ -87,53 +29,101 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
 }
 
-function getMembersByProjectId(projectId) {
-  return db.prepare(`
-    SELECT username
-    FROM project_members
-    WHERE project_id = ?
-    ORDER BY username ASC
-  `).all(projectId).map((row) => row.username);
+function nowIso() {
+  return new Date().toISOString();
 }
 
-function setMembersForProject(projectId, members, ownerUsername) {
-  const safeMembers = Array.isArray(members) ? members : [];
-  const normalized = new Set();
+function deepCopy(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
-  safeMembers.forEach((member) => {
+function normalizeMemberList(members, ownerUsername) {
+  const set = new Set();
+
+  (Array.isArray(members) ? members : []).forEach((member) => {
     const value = String(member || "").trim();
-    if (value) normalized.add(value);
+    if (value) set.add(value);
   });
 
-  if (ownerUsername) {
-    normalized.add(String(ownerUsername).trim());
+  const owner = String(ownerUsername || "").trim();
+  if (owner) set.add(owner);
+
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeTimeline(timeline) {
+  if (!Array.isArray(timeline)) return [];
+
+  return timeline
+    .filter((item) => item && item.task)
+    .map((item, index) => ({
+      id: Number(item.id) || index + 1,
+      task: String(item.task || ""),
+      owner: String(item.owner || ""),
+      due: String(item.due || ""),
+      completed: Boolean(item.completed),
+      completedBy: String(item.completedBy || "")
+    }));
+}
+
+function safeProgress(value) {
+  return Math.max(0, Math.min(100, Number(value) || 0));
+}
+
+function createState() {
+  return {
+    nextProjectId: 1,
+    projects: []
+  };
+}
+
+function loadState() {
+  const state = store.get("state");
+  if (!state || typeof state !== "object" || !Array.isArray(state.projects)) {
+    const fresh = createState();
+    store.putSync("state", fresh);
+    return fresh;
   }
+  return state;
+}
 
-  db.prepare("DELETE FROM project_members WHERE project_id = ?").run(projectId);
+function saveState(state) {
+  store.putSync("state", state);
+}
 
-  const insertStmt = db.prepare(`
-    INSERT INTO project_members (project_id, username)
-    VALUES (?, ?)
-  `);
+function projectToResponse(project) {
+  return {
+    id: project.id,
+    title: project.title,
+    ownerUsername: project.ownerUsername,
+    summary: project.summary,
+    status: project.status,
+    deadline: project.deadline,
+    progress: project.progress,
+    visibility: project.visibility,
+    team: project.team,
+    priority: project.priority,
+    risk: project.risk,
+    course: project.course || "General Studies",
+    gitRepoUrl: project.gitRepoUrl || "",
+    gitBranch: project.gitBranch || "main",
+    gitNotes: project.gitNotes || "",
+    lifecycleStage: project.lifecycleStage || "Planning",
+    members: Array.isArray(project.members) ? project.members : [project.ownerUsername],
+    timeline: Array.isArray(project.timeline) ? project.timeline : []
+  };
+}
 
-  Array.from(normalized).forEach((username) => {
-    insertStmt.run(projectId, username);
-  });
+function canAccessProject(project, username) {
+  if (!project || !username) return false;
+  if (project.ownerUsername === username) return true;
+  if (project.visibility === "shared") return true;
+  return (project.members || []).includes(username);
 }
 
 function seedProjectsIfEmpty() {
-  const count = db.prepare("SELECT COUNT(*) AS c FROM projects").get().c;
-  if (count > 0) return;
-
-  const insertProject = db.prepare(`
-    INSERT INTO projects (title, owner_username, summary, status, deadline, progress, visibility, team, priority, risk, course, git_repo_url, git_branch, git_notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const insertTimeline = db.prepare(`
-    INSERT INTO project_timeline (project_id, task, task_owner, due, completed, completed_by)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
+  const state = loadState();
+  if (state.projects.length > 0) return;
 
   const seed = [
     {
@@ -151,10 +141,12 @@ function seedProjectsIfEmpty() {
       gitRepoUrl: "",
       gitBranch: "main",
       gitNotes: "",
+      lifecycleStage: "Execution",
+      members: ["evarg22", "Ari", "Nina", "Theo", "Marta"],
       timeline: [
-        ["Finalize hero interaction", "Ari", "Apr 18", 1, "Ari"],
-        ["Approve mobile QA", "Nina", "Apr 20", 1, "Nina"],
-        ["Publish v2 content", "Theo", "Apr 22", 0, ""]
+        { id: 1, task: "Finalize hero interaction", owner: "Ari", due: "Apr 18", completed: true, completedBy: "Ari" },
+        { id: 2, task: "Approve mobile QA", owner: "Nina", due: "Apr 20", completed: true, completedBy: "Nina" },
+        { id: 3, task: "Publish v2 content", owner: "Theo", due: "Apr 22", completed: false, completedBy: "" }
       ]
     },
     {
@@ -172,78 +164,144 @@ function seedProjectsIfEmpty() {
       gitRepoUrl: "",
       gitBranch: "main",
       gitNotes: "",
+      lifecycleStage: "Execution",
+      members: ["evarg22", "Eric", "Marta"],
       timeline: [
-        ["Finish payment webhook", "Eric", "Apr 21", 1, "Eric"],
-        ["Audit API logs", "Marta", "Apr 24", 0, ""],
-        ["Run staging tests", "Devon", "Apr 27", 0, ""]
+        { id: 1, task: "Finish payment webhook", owner: "Eric", due: "Apr 21", completed: true, completedBy: "Eric" },
+        { id: 2, task: "Audit API logs", owner: "Marta", due: "Apr 24", completed: false, completedBy: "" },
+        { id: 3, task: "Run staging tests", owner: "Devon", due: "Apr 27", completed: false, completedBy: "" }
       ]
     }
   ];
 
-  seed.forEach((project) => {
-    const result = insertProject.run(
-      project.title,
-      project.owner,
-      project.summary,
-      project.status,
-      project.deadline,
-      project.progress,
-      project.visibility,
-      project.team,
-      project.priority,
-      project.risk,
-      project.course,
-      project.gitRepoUrl,
-      project.gitBranch,
-      project.gitNotes
-    );
+  seed.forEach((item) => {
+    const timestamp = nowIso();
+    const project = {
+      id: state.nextProjectId++,
+      title: item.title,
+      ownerUsername: item.owner,
+      summary: item.summary,
+      status: item.status,
+      deadline: item.deadline,
+      progress: safeProgress(item.progress),
+      visibility: item.visibility === "shared" ? "shared" : "private",
+      lifecycleStage: item.lifecycleStage || "Planning",
+      members: normalizeMemberList(item.members, item.owner),
+      team: item.team,
+      priority: item.priority,
+      risk: item.risk,
+      course: item.course,
+      gitRepoUrl: item.gitRepoUrl,
+      gitBranch: item.gitBranch,
+      gitNotes: item.gitNotes,
+      timeline: normalizeTimeline(item.timeline),
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
 
-    project.timeline.forEach((step) => {
-      insertTimeline.run(result.lastInsertRowid, step[0], step[1], step[2], step[3], step[4]);
-    });
+    state.projects.push(project);
   });
+
+  saveState(state);
 }
 
-function getTimelineByProjectId(projectId) {
-  return db.prepare(`
-    SELECT id, task, task_owner, due, completed, completed_by
-    FROM project_timeline
-    WHERE project_id = ?
-    ORDER BY id ASC
-  `).all(projectId).map((row) => ({
-    id: row.id,
-    task: row.task,
-    owner: row.task_owner || "",
-    due: row.due || "",
-    completed: Boolean(row.completed),
-    completedBy: row.completed_by || ""
-  }));
+function migrateFromLegacySqlite() {
+  const state = loadState();
+  const defaultSeedTitles = new Set(["Website Redesign", "API Integration"]);
+  const looksLikeDefaultSeed =
+    state.projects.length === 2 &&
+    state.projects.every((item) => defaultSeedTitles.has(String(item.title || "")));
+
+  if (state.projects.length > 0 && !looksLikeDefaultSeed) return false;
+  if (!fs.existsSync(LEGACY_SQLITE_PATH)) return false;
+
+  let DatabaseSync;
+  try {
+    ({ DatabaseSync } = require("node:sqlite"));
+  } catch (_err) {
+    return false;
+  }
+
+  let legacyDb;
+  try {
+    legacyDb = new DatabaseSync(LEGACY_SQLITE_PATH, { readOnly: true });
+
+    const projects = legacyDb.prepare("SELECT * FROM projects ORDER BY id ASC").all();
+    if (!projects.length) {
+      legacyDb.close();
+      return false;
+    }
+
+    const timelineRows = legacyDb.prepare("SELECT * FROM project_timeline ORDER BY id ASC").all();
+    const memberRows = legacyDb.prepare("SELECT * FROM project_members ORDER BY username ASC").all();
+
+    const timelineMap = new Map();
+    timelineRows.forEach((row) => {
+      const list = timelineMap.get(row.project_id) || [];
+      list.push({
+        id: Number(row.id) || list.length + 1,
+        task: String(row.task || ""),
+        owner: String(row.task_owner || ""),
+        due: String(row.due || ""),
+        completed: Boolean(row.completed),
+        completedBy: String(row.completed_by || "")
+      });
+      timelineMap.set(row.project_id, list);
+    });
+
+    const memberMap = new Map();
+    memberRows.forEach((row) => {
+      const list = memberMap.get(row.project_id) || [];
+      list.push(String(row.username || ""));
+      memberMap.set(row.project_id, list);
+    });
+
+    const migratedProjects = projects.map((row) => {
+      const ownerUsername = String(row.owner_username || "").trim();
+      return {
+        id: Number(row.id),
+        title: String(row.title || "Untitled Project"),
+        ownerUsername,
+        summary: String(row.summary || ""),
+        status: String(row.status || "In Progress"),
+        deadline: String(row.deadline || ""),
+        progress: safeProgress(row.progress),
+        visibility: row.visibility === "shared" ? "shared" : "private",
+        lifecycleStage: String(row.lifecycle_stage || "Planning"),
+        members: normalizeMemberList(memberMap.get(row.id) || [], ownerUsername),
+        team: String(row.team || "Team: 1 person"),
+        priority: String(row.priority || "Priority: Medium"),
+        risk: String(row.risk || "Risk: None"),
+        course: String(row.course || "General Studies"),
+        gitRepoUrl: String(row.git_repo_url || ""),
+        gitBranch: String(row.git_branch || "main"),
+        gitNotes: String(row.git_notes || ""),
+        timeline: normalizeTimeline(timelineMap.get(row.id) || []),
+        createdAt: row.created_at ? String(row.created_at) : nowIso(),
+        updatedAt: row.updated_at ? String(row.updated_at) : nowIso()
+      };
+    });
+
+    const maxId = migratedProjects.reduce((highest, item) => Math.max(highest, Number(item.id) || 0), 0);
+    state.projects = migratedProjects;
+    state.nextProjectId = maxId + 1;
+    saveState(state);
+
+    legacyDb.close();
+    console.log(`Migrated ${migratedProjects.length} project(s) from legacy SQLite to LMDB.`);
+    return true;
+  } catch (err) {
+    if (legacyDb) {
+      try {
+        legacyDb.close();
+      } catch (_ignore) {}
+    }
+    console.warn("Legacy SQLite migration skipped:", err?.message || err);
+    return false;
+  }
 }
 
-function projectRowToResponse(row) {
-  return {
-    id: row.id,
-    title: row.title,
-    ownerUsername: row.owner_username,
-    summary: row.summary,
-    status: row.status,
-    deadline: row.deadline,
-    progress: row.progress,
-    visibility: row.visibility,
-    team: row.team,
-    priority: row.priority,
-    risk: row.risk,
-    course: row.course || "General Studies",
-    gitRepoUrl: row.git_repo_url || "",
-    gitBranch: row.git_branch || "main",
-    gitNotes: row.git_notes || "",
-    lifecycleStage: row.lifecycle_stage || "Planning",
-    members: getMembersByProjectId(row.id),
-    timeline: getTimelineByProjectId(row.id)
-  };
-}
-
-ensureProjectSchema();
+migrateFromLegacySqlite();
 seedProjectsIfEmpty();
 
 app.post("/signup", (req, res) => {
@@ -283,20 +341,13 @@ app.get("/projects", (req, res) => {
     return res.status(400).json({ error: "username query parameter is required" });
   }
 
-  const rows = db.prepare(`
-    SELECT *
-    FROM projects
-    WHERE owner_username = ?
-      OR visibility = 'shared'
-      OR EXISTS (
-        SELECT 1
-        FROM project_members pm
-        WHERE pm.project_id = projects.id AND pm.username = ?
-      )
-    ORDER BY datetime(updated_at) DESC, id DESC
-  `).all(username, username);
+  const state = loadState();
+  const projects = state.projects
+    .filter((project) => canAccessProject(project, username))
+    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || b.id - a.id)
+    .map((project) => projectToResponse(project));
 
-  res.json({ projects: rows.map(projectRowToResponse) });
+  res.json({ projects });
 });
 
 app.get("/projects/:id", (req, res) => {
@@ -307,19 +358,15 @@ app.get("/projects/:id", (req, res) => {
     return res.status(400).json({ error: "username query parameter is required" });
   }
 
-  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
-  if (!row) return res.status(404).json({ error: "Project not found" });
+  const state = loadState();
+  const project = state.projects.find((item) => item.id === projectId);
+  if (!project) return res.status(404).json({ error: "Project not found" });
 
-  const canAccess =
-    row.owner_username === username ||
-    row.visibility === "shared" ||
-    db.prepare("SELECT 1 AS ok FROM project_members WHERE project_id = ? AND username = ? LIMIT 1").get(projectId, username);
-
-  if (!canAccess) {
+  if (!canAccessProject(project, username)) {
     return res.status(403).json({ error: "Access denied" });
   }
 
-  res.json({ project: projectRowToResponse(row) });
+  res.json({ project: projectToResponse(project) });
 });
 
 app.post("/projects", (req, res) => {
@@ -347,37 +394,39 @@ app.post("/projects", (req, res) => {
     return res.status(400).json({ error: "username and title are required" });
   }
 
-  const safeVisibility = visibility === "shared" ? "shared" : "private";
-  const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+  const state = loadState();
+  const timestamp = nowIso();
 
-  const result = db.prepare(`
-    INSERT INTO projects (title, owner_username, summary, status, deadline, progress, visibility, lifecycle_stage, team, priority, risk, course, git_repo_url, git_branch, git_notes, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-  `).run(title, username, summary, status, deadline, safeProgress, safeVisibility, lifecycleStage, team, priority, risk, course, gitRepoUrl, gitBranch, gitNotes);
+  const normalizedMembers = normalizeMemberList(members, username);
+  const resolvedTeam = String(team || "").trim() || `Team: ${normalizedMembers.length} ${normalizedMembers.length === 1 ? "person" : "people"}`;
 
-  setMembersForProject(result.lastInsertRowid, members, username);
+  const project = {
+    id: state.nextProjectId++,
+    title: String(title),
+    ownerUsername: String(username),
+    summary: String(summary),
+    status: String(status || "In Progress"),
+    deadline: String(deadline || ""),
+    progress: safeProgress(progress),
+    visibility: visibility === "shared" ? "shared" : "private",
+    lifecycleStage: String(lifecycleStage || "Planning"),
+    members: normalizedMembers,
+    team: resolvedTeam,
+    priority: String(priority || "Priority: Medium"),
+    risk: String(risk || "Risk: None"),
+    course: String(course || "General Studies"),
+    gitRepoUrl: String(gitRepoUrl || ""),
+    gitBranch: String(gitBranch || "main"),
+    gitNotes: String(gitNotes || ""),
+    timeline: normalizeTimeline(timeline),
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
 
-  if (Array.isArray(timeline) && timeline.length) {
-    const insertTimeline = db.prepare(`
-      INSERT INTO project_timeline (project_id, task, task_owner, due, completed, completed_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
+  state.projects.push(project);
+  saveState(state);
 
-    timeline.forEach((item) => {
-      if (!item || !item.task) return;
-      insertTimeline.run(
-        result.lastInsertRowid,
-        String(item.task),
-        String(item.owner || ""),
-        String(item.due || ""),
-        item.completed ? 1 : 0,
-        String(item.completedBy || "")
-      );
-    });
-  }
-
-  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(result.lastInsertRowid);
-  res.json({ success: true, project: projectRowToResponse(row) });
+  res.json({ success: true, project: projectToResponse(project) });
 });
 
 app.put("/projects/:id", (req, res) => {
@@ -401,91 +450,85 @@ app.put("/projects/:id", (req, res) => {
     gitNotes
   } = req.body;
 
-  const existing = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
-  if (!existing) return res.status(404).json({ error: "Project not found" });
-  if (!username || existing.owner_username !== username) {
+  const state = loadState();
+  const index = state.projects.findIndex((item) => item.id === projectId);
+  if (index === -1) return res.status(404).json({ error: "Project not found" });
+
+  const existing = state.projects[index];
+  if (!username || existing.ownerUsername !== username) {
     return res.status(403).json({ error: "Only the owner can edit this project" });
   }
 
-  const safeVisibility = visibility === "shared" ? "shared" : "private";
-  const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+  const nextMembers = Array.isArray(members)
+    ? normalizeMemberList(members, existing.ownerUsername)
+    : normalizeMemberList(existing.members, existing.ownerUsername);
 
-  db.prepare(`
-    UPDATE projects
-    SET title = ?, summary = ?, status = ?, deadline = ?, progress = ?, visibility = ?,
-      lifecycle_stage = ?, team = ?, priority = ?, risk = ?, course = ?, git_repo_url = ?, git_branch = ?, git_notes = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `).run(
-    String(title || existing.title),
-    String(summary || ""),
-    String(status || "In Progress"),
-    String(deadline || ""),
-    safeProgress,
-    safeVisibility,
-    String(lifecycleStage || "Planning"),
-    String(team || "Team: 1 person"),
-    String(priority || "Priority: Medium"),
-    String(risk || "Risk: None"),
-    String(course || "General Studies"),
-    String(gitRepoUrl || ""),
-    String(gitBranch || "main"),
-    String(gitNotes || ""),
-    projectId
-  );
+  const updated = {
+    ...existing,
+    title: String(title || existing.title),
+    summary: String(summary || ""),
+    status: String(status || "In Progress"),
+    deadline: String(deadline || ""),
+    progress: safeProgress(progress),
+    visibility: visibility === "shared" ? "shared" : "private",
+    lifecycleStage: String(lifecycleStage || "Planning"),
+    members: nextMembers,
+    team: String(team || existing.team || "Team: 1 person"),
+    priority: String(priority || "Priority: Medium"),
+    risk: String(risk || "Risk: None"),
+    course: String(course || "General Studies"),
+    gitRepoUrl: String(gitRepoUrl || ""),
+    gitBranch: String(gitBranch || "main"),
+    gitNotes: String(gitNotes || ""),
+    updatedAt: nowIso()
+  };
 
-  if (Array.isArray(members)) {
-    setMembersForProject(projectId, members, existing.owner_username);
-  }
+  state.projects[index] = updated;
+  saveState(state);
 
-  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
-  res.json({ success: true, project: projectRowToResponse(row) });
+  res.json({ success: true, project: projectToResponse(updated) });
 });
 
 app.put("/projects/:id/timeline", (req, res) => {
   const projectId = Number(req.params.id);
   const { username, timeline } = req.body;
 
-  const existing = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
-  if (!existing) return res.status(404).json({ error: "Project not found" });
-  if (!username || existing.owner_username !== username) {
-    return res.status(403).json({ error: "Only the owner can edit timeline" });
-  }
-
   if (!Array.isArray(timeline)) {
     return res.status(400).json({ error: "timeline must be an array" });
   }
 
-  const deleteStmt = db.prepare("DELETE FROM project_timeline WHERE project_id = ?");
-  const insertStmt = db.prepare(`
-    INSERT INTO project_timeline (project_id, task, task_owner, due, completed, completed_by)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
+  const state = loadState();
+  const index = state.projects.findIndex((item) => item.id === projectId);
+  if (index === -1) return res.status(404).json({ error: "Project not found" });
 
-  try {
-    db.exec("BEGIN");
-    deleteStmt.run(projectId);
-    timeline.forEach((item) => {
-      if (!item || !item.task) return;
-      insertStmt.run(
-        projectId,
-        String(item.task),
-        String(item.owner || ""),
-        String(item.due || ""),
-        item.completed ? 1 : 0,
-        String(item.completedBy || "")
-      );
-    });
-    db.prepare("UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(projectId);
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    return res.status(500).json({ error: "Failed to update timeline" });
+  const existing = state.projects[index];
+  if (!username || existing.ownerUsername !== username) {
+    return res.status(403).json({ error: "Only the owner can edit timeline" });
   }
 
-  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
-  res.json({ success: true, project: projectRowToResponse(row) });
+  const updated = {
+    ...existing,
+    timeline: normalizeTimeline(timeline),
+    updatedAt: nowIso()
+  };
+
+  state.projects[index] = updated;
+  saveState(state);
+
+  res.json({ success: true, project: projectToResponse(updated) });
 });
 
-app.listen(3000, () => {
-  console.log("Backend running on http://localhost:3000");
+const server = app.listen(3000, () => {
+  console.log("Backend running on http://localhost:3000 (LMDB)");
+});
+
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error("Port 3000 is already in use. Stop the other process or run on a different port.");
+    process.exit(1);
+    return;
+  }
+
+  console.error("Backend failed to start:", err?.message || err);
+  process.exit(1);
 });

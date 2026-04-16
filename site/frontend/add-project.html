@@ -161,6 +161,23 @@
       color: rgba(217, 235, 252, 0.92);
     }
 
+    .member-add-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .member-empty {
+      border: 1px dashed rgba(130, 202, 255, 0.24);
+      border-radius: 10px;
+      padding: 10px;
+      color: rgba(194, 230, 255, 0.82);
+      font-size: 0.82rem;
+      font-family: 'Manrope', sans-serif;
+      background: rgba(8, 14, 28, 0.35);
+    }
+
     .timeline-note {
       border: 1px solid rgba(118, 216, 255, 0.24);
       border-radius: 12px;
@@ -222,6 +239,7 @@
     <a href="dashboard.html">Dashboard</a>
     <a href="my-projects.html">My Projects</a>
     <a href="calendar.html">Calendar</a>
+    <a href="timeline.html">Timeline</a>
     <a href="index.html">Home</a>
 
     <div class="signin-logo">
@@ -310,11 +328,16 @@
           </label>
           <label class="field full">
             Summary / Description
-            <textarea id="projectSummary" required placeholder="Describe the project and success criteria."></textarea>
+            <textarea id="projectSummary" placeholder="Describe the project and success criteria (optional)."></textarea>
           </label>
           <label class="field full">
             Project Members
+            <div class="member-add-row">
+              <input id="memberInput" type="text" placeholder="Add member username (example: mahesh.sharma)">
+              <button id="addMemberBtn" class="pill-btn" type="button">Add Member</button>
+            </div>
             <div id="membersPicker" class="members-picker"></div>
+            <div id="membersEmpty" class="member-empty" style="display:none;">No members found yet. Add teammates manually above.</div>
           </label>
           <div class="field full">
             Timeline Updates
@@ -343,8 +366,9 @@
       window.location.href = "signin.html";
     }
 
-    const API = "http://localhost:3000";
+    const PROJECTS_API = "http://localhost:3000";
     let users = [];
+    let manualMembers = [];
 
     function escapeHtml(value) {
       return String(value || "")
@@ -353,6 +377,10 @@
         .replace(/>/g, "&gt;")
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function normalizeUsername(value) {
+      return String(value || "").trim();
     }
 
     async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
@@ -374,22 +402,67 @@
       return selected;
     }
 
+    function dedupeMemberList(list) {
+      const bucket = new Set();
+      list.forEach((item) => {
+        const normalized = normalizeUsername(item);
+        if (normalized) bucket.add(normalized);
+      });
+      return Array.from(bucket).sort((a, b) => a.localeCompare(b));
+    }
+
     function renderMembers() {
       const membersPicker = document.getElementById("membersPicker");
-      membersPicker.innerHTML = users.map((name) => {
+      const combined = dedupeMemberList([...users, ...manualMembers, user]);
+      membersPicker.innerHTML = combined.map((name) => {
         const checked = name === user ? "checked" : "";
         return `<label class="member-option"><input class="member-check" type="checkbox" value="${escapeHtml(name)}" ${checked}>${escapeHtml(name)}</label>`;
       }).join("");
+
+      const emptyState = document.getElementById("membersEmpty");
+      emptyState.style.display = combined.length ? "none" : "block";
+    }
+
+    function addMemberFromInput() {
+      const input = document.getElementById("memberInput");
+      const feedback = document.getElementById("formFeedback");
+      const value = normalizeUsername(input.value);
+
+      if (!value) {
+        feedback.textContent = "Enter a username before adding a member.";
+        return;
+      }
+
+      const current = dedupeMemberList([...users, ...manualMembers, user]);
+      if (current.includes(value)) {
+        feedback.textContent = `${value} is already in the member list.`;
+        input.value = "";
+        return;
+      }
+
+      manualMembers.push(value);
+      renderMembers();
+
+      const checkboxes = Array.from(document.querySelectorAll(".member-check"));
+      const target = checkboxes.find((el) => el.value === value);
+      if (target) target.checked = true;
+
+      feedback.textContent = `Added ${value} to project members.`;
+      input.value = "";
     }
 
     async function loadUsers() {
       try {
-        const response = await fetchWithTimeout(`${API}/users`);
+        const response = await fetchWithTimeout(`${PROJECTS_API}/users`);
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        users = Array.isArray(data.users) && data.users.length ? data.users : [user];
+        const incoming = Array.isArray(data?.users) ? data.users : [];
+        users = dedupeMemberList(incoming.map((item) => {
+          if (typeof item === "string") return item;
+          return item?.username || "";
+        }));
       } catch (_err) {
-        users = [user];
+        users = [];
       }
 
       if (!users.includes(user)) {
@@ -405,12 +478,13 @@
         event.stopPropagation();
       }
       const feedback = document.getElementById("formFeedback");
+      const createBtn = document.getElementById("createProjectBtn");
 
       const members = selectedMembers();
       const payload = {
         username: user,
         title: document.getElementById("projectTitle").value.trim(),
-        summary: document.getElementById("projectSummary").value.trim(),
+        summary: document.getElementById("projectSummary").value.trim() || "No summary provided.",
         status: document.getElementById("projectStatus").value.trim() || "Planning",
         deadline: document.getElementById("projectDeadline").value || "",
         progress: Number(document.getElementById("projectProgress").value || 0),
@@ -427,14 +501,17 @@
         timeline: []
       };
 
-      if (!payload.title || !payload.summary) {
-        feedback.textContent = "Project name and summary are required.";
+      if (!payload.title) {
+        feedback.textContent = "Project name is required.";
+        alert("Project name is required.");
         return;
       }
 
       try {
+        createBtn.disabled = true;
+        createBtn.textContent = "Creating...";
         feedback.textContent = "Creating project...";
-        const response = await fetchWithTimeout(`${API}/projects`, {
+        const response = await fetchWithTimeout(`${PROJECTS_API}/projects`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -453,7 +530,7 @@
 
         if (!projectId) {
           try {
-            const listRes = await fetch(`${API}/projects?username=${encodeURIComponent(user)}`);
+            const listRes = await fetch(`${PROJECTS_API}/projects?username=${encodeURIComponent(user)}`);
             if (listRes.ok) {
               const listData = await listRes.json();
               const projects = Array.isArray(listData.projects) ? listData.projects : [];
@@ -481,14 +558,26 @@
       } catch (err) {
         if (err?.name === "AbortError") {
           feedback.textContent = "Backend not reachable. Start server: npm --prefix backend start";
+          alert(feedback.textContent);
           return;
         }
         feedback.textContent = `Could not create project: ${err?.message || "Try again."}`;
+        alert(feedback.textContent);
+      } finally {
+        createBtn.disabled = false;
+        createBtn.textContent = "Create Project";
       }
     }
 
     document.getElementById("projectForm").addEventListener("submit", handleCreateProject);
     document.getElementById("createProjectBtn").addEventListener("click", handleCreateProject);
+    document.getElementById("addMemberBtn").addEventListener("click", addMemberFromInput);
+    document.getElementById("memberInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addMemberFromInput();
+      }
+    });
 
     loadUsers();
   </script>

@@ -117,15 +117,11 @@
     }
 
     .hero-callout {
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(17, 30, 54, 0.92), rgba(14, 36, 58, 0.92));
-      border: 1px solid rgba(117, 217, 255, 0.28);
-      padding: 14px;
       color: rgba(234, 248, 255, 0.95);
       font-family: 'Manrope', sans-serif;
       font-size: 1rem;
-      line-height: 1.4;
-      min-height: 118px;
+      line-height: 1.5;
+      margin: 0;
     }
 
     .stats {
@@ -304,6 +300,8 @@
     <img src="logo.png" class="logo-img" alt="Rolebit Logo">
     <a href="dashboard.html">Dashboard</a>
     <a href="my-projects.html">My Projects</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="timeline.html">Timeline</a>
     <a href="index.html">Home</a>
   </div>
 
@@ -312,7 +310,7 @@
       <section class="shell">
         <h1 class="hero-title">Your Reminder Studio</h1>
         <p class="hero-sub" id="heroSub"></p>
-        <div class="hero-callout" id="heroCallout"></div>
+        <p class="hero-callout" id="heroCallout"></p>
 
         <div class="stats">
           <div class="stat-card">
@@ -406,9 +404,9 @@
       const pending = reminders.filter((item) => !item.done);
       const next = pending.sort((a, b) => a.time.localeCompare(b.time))[0];
       if (!next) {
-        return "Clear slate. Every reminder is handled, great pace.";
+        return "Clear slate. Every reminder is handled and your pace is strong.";
       }
-      return `Your next nudge is ${next.text} at ${next.time}. Keep the rhythm going.`;
+      return `Next nudge: \"${next.text}\" at ${next.time}. Keep the rhythm going.`;
     }
 
     function renderStats() {
