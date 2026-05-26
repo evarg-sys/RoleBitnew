@@ -93,6 +93,19 @@
       margin: 0 auto;
     }
 
+    /* This page only: more transparent shell per design request. */
+    .project-detail-shell {
+      background: transparent !important;
+      border-color: rgba(116, 165, 141, 0.26) !important;
+      backdrop-filter: blur(10px) saturate(106%) !important;
+      box-shadow: none !important;
+    }
+
+    .project-detail-shell .timeline-preview {
+      background: rgba(3, 7, 6, 0.22) !important;
+      border-color: rgba(116, 165, 141, 0.22) !important;
+    }
+
     .title {
       margin: 0;
       font-family: 'Space Grotesk', sans-serif;
@@ -269,13 +282,15 @@
     <img src="logo.png" class="logo-img" alt="Rolebit Logo">
     <a href="dashboard.html">Dashboard</a>
     <a href="my-projects.html">My Projects</a>
+    <a href="github.html">GitHub</a>
+    <a href="circle.html">Circle</a>
+    <a href="profile.html">Profile</a>
     <a href="timeline.html">Timeline</a>
     <a href="calendar.html">Calendar</a>
-    <a href="index.html">Home</a>
   </div>
 
   <main class="page-wrap">
-    <section class="panel">
+    <section class="panel project-detail-shell">
       <h1 id="projectTitle" class="title">Project Details</h1>
       <p class="subtitle">Single reusable project page with deeper details, git metadata, and focused management.</p>
 
@@ -294,8 +309,9 @@
 
     const PROJECTS_API = "http://localhost:3000";
     const params = new URLSearchParams(window.location.search);
-    const projectId = params.get("projectId") || localStorage.getItem("rolebit_last_created_project_id") || "";
+    const requestedProjectId = params.get("projectId") || localStorage.getItem("rolebit_last_created_project_id") || "";
     const cachedProjectPayloadRaw = localStorage.getItem("rolebit_last_created_project_payload");
+    let projectId = requestedProjectId;
     let projectData = null;
 
     function tryLoadCachedProject() {
@@ -421,7 +437,8 @@
 
     async function loadProject() {
       if (!projectId) {
-        document.getElementById("statusText").textContent = "No project selected.";
+        document.getElementById("statusText").textContent = "No project selected. Open Add Project to create one.";
+        document.getElementById("projectFormArea").innerHTML = '<div class="timeline-item">No project selected yet. <a href="add-project.html" style="color:#cde8da;">Create a project</a>.</div>';
         return;
       }
 
@@ -451,13 +468,39 @@
           } catch (_ignore) {}
         }
 
+        if (!loaded && projects.length) {
+          // Recover from stale projectId values after duplicate cleanup or deleted records.
+          let fallback = null;
+          const cached = tryLoadCachedProject();
+          if (cached) {
+            fallback = projects.find((project) => String(project.title || "") === String(cached.title || "")) || null;
+          }
+          if (!fallback) {
+            fallback = projects[0];
+          }
+          if (fallback) {
+            loaded = fallback;
+            projectId = String(fallback.id || "");
+            const nextUrl = `project-detail.html?projectId=${encodeURIComponent(projectId)}`;
+            window.history.replaceState({}, "", nextUrl);
+          }
+        }
+
         if (!loaded) throw new Error("Project not found");
         projectData = loaded;
+        projectId = String(projectData.id || projectId || "");
         localStorage.setItem("rolebit_last_created_project_id", String(projectData.id));
         localStorage.setItem("rolebit_last_created_project_payload", JSON.stringify(projectData));
         document.getElementById("projectTitle").textContent = projectData.title || "Project Details";
         renderForm(projectData);
         document.getElementById("statusText").textContent = "Project ready.";
+
+        if (typeof initGithubProjectIntegration === "function") {
+          initGithubProjectIntegration({
+            containerId: "githubIntegrationArea",
+            projectId
+          });
+        }
       } catch (err) {
         if (projectData) {
           document.getElementById("statusText").textContent = "Using cached project data. Backend sync unavailable.";
@@ -467,7 +510,8 @@
           document.getElementById("statusText").textContent = "Backend not reachable. Start server: npm --prefix backend start";
           return;
         }
-        document.getElementById("statusText").textContent = "Could not load project details.";
+        document.getElementById("statusText").textContent = "Could not load project details. Try My Projects or Add Project.";
+        document.getElementById("projectFormArea").innerHTML = '<div class="timeline-item">Could not load this project. <a href="my-projects.html" style="color:#cde8da;">Open My Projects</a> or <a href="add-project.html" style="color:#cde8da;">create one</a>.</div>';
       }
     }
 
@@ -501,7 +545,24 @@
           body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Failed save");
+        if (!response.ok) {
+          if (response.status === 409) {
+            let conflictData = null;
+            try {
+              conflictData = await response.json();
+            } catch (_ignore) {}
+
+            const existingId = conflictData?.existingProject?.id;
+            if (existingId) {
+              document.getElementById("statusText").textContent = "This repository is already linked to another project. Opening it now...";
+              window.location.href = `project-detail.html?projectId=${encodeURIComponent(existingId)}`;
+              return;
+            }
+          }
+
+          throw new Error("Failed save");
+        }
+
         document.getElementById("statusText").textContent = "Project saved.";
         loadProject();
       } catch (_err) {
@@ -516,10 +577,6 @@
     });
 
     loadProject();
-    initGithubProjectIntegration({
-      containerId: "githubIntegrationArea",
-      projectId
-    });
   </script>
 </body>
 </html>

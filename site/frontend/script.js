@@ -1,7 +1,5 @@
 const API = "http://localhost:3000";
 
-const ADMIN_PASSWORD = "meow1010";
-
 /* ---------- ADMIN FUNCTIONS ---------- */
 
 function toggleAdminInput() {
@@ -15,27 +13,17 @@ function toggleAdminInput() {
 }
 
 function submitAdminPassword() {
-  const password = document.getElementById("adminPassword").value;
   const statusEl = document.getElementById("adminStatus");
-  
-  if (password === ADMIN_PASSWORD) {
-    localStorage.setItem("rolebit_admin", "true");
-    statusEl.innerText = "✓ Unlocked";
-    statusEl.classList.add("active");
-    statusEl.classList.remove("error");
-    
-    // Redirect to dashboard if not already there
-    if (!location.pathname.includes("dashboard")) {
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 500);
-    }
-  } else {
-    statusEl.innerText = "✗ Wrong password";
-    statusEl.classList.add("error");
-    statusEl.classList.remove("active");
-    document.getElementById("adminPassword").value = "";
-  }
+
+  if (!statusEl) return;
+
+  statusEl.innerText = "Admin access is now assigned by backend username. Sign in to continue.";
+  statusEl.classList.remove("error");
+  statusEl.classList.add("active");
+
+  setTimeout(() => {
+    window.location.href = "signin.html";
+  }, 800);
 }
 
 function isAdmin() {
@@ -44,63 +32,39 @@ function isAdmin() {
 
 /* ---------- AUTH ---------- */
 
-function showSuccessNotification(message) {
-  let notification = document.getElementById("successNotification");
-  
-  if (!notification) {
-    notification = document.createElement("div");
-    notification.id = "successNotification";
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: rgba(76, 175, 80, 0.9);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(76, 175, 80, 0.5);
-      color: white;
-      padding: 16px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      z-index: 9999;
-      animation: slideIn 0.4s ease-out;
-    `;
-    document.body.appendChild(notification);
-    
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateX(100px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-      @keyframes slideOut {
-        from {
-          opacity: 1;
-          transform: translateX(0);
-        }
-        to {
-          opacity: 0;
-          transform: translateX(100px);
-        }
-      }
-    `;
-    document.head.appendChild(style);
+function showTopNotification(message, type = "success") {
+  if (!message) return;
+
+  let stack = document.getElementById("rbToastStack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "rbToastStack";
+    stack.className = "rb-toast-stack";
+    document.body.appendChild(stack);
   }
-  
-  notification.textContent = message;
-  notification.style.animation = "slideIn 0.4s ease-out";
-  
+
+  const toast = document.createElement("div");
+  toast.className = `rb-toast ${type === "error" ? "error" : "success"}`;
+  toast.textContent = message;
+  stack.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add("show");
+  });
+
   setTimeout(() => {
-    notification.style.animation = "slideOut 0.4s ease-out";
+    toast.classList.remove("show");
     setTimeout(() => {
-      notification.style.display = "none";
-    }, 400);
-  }, 3000);
+      toast.remove();
+      if (!stack.childElementCount) {
+        stack.remove();
+      }
+    }, 260);
+  }, 2200);
+}
+
+function showSuccessNotification(message) {
+  showTopNotification(message, "success");
 }
 
 async function signup() {
@@ -112,6 +76,7 @@ async function signup() {
   const firstName = document.getElementById("firstName")?.value || "";
   const lastName = document.getElementById("lastName")?.value || "";
   const university = document.getElementById("university")?.value || "";
+  const course = document.getElementById("course")?.value || "";
 
   if (!username || !password) {
     alert("Username and password are required");
@@ -128,7 +93,8 @@ async function signup() {
         email,
         firstName,
         lastName,
-        university
+        university,
+        course
       })
     });
 
@@ -136,7 +102,7 @@ async function signup() {
     if (data.error) {
       alert(data.error);
     } else {
-      showSuccessNotification("✓ Account created successfully!");
+      showTopNotification("Account created successfully");
       setTimeout(() => {
         window.location.href = "signin.html";
       }, 2000);
@@ -149,7 +115,6 @@ async function signup() {
 function login() {
   const username = document.getElementById("loginUser").value;
   const password = document.getElementById("loginPass").value;
-  const adminPass = document.getElementById("adminPass").value;
 
   if (!username || !password) {
     alert("Username and password are required");
@@ -166,12 +131,19 @@ function login() {
     .then(data => {
       if (data.success) {
         localStorage.setItem("rolebit_user", data.username);  // MATCH HOME PAGE
-        
-        // Check if admin password is correct
-        if (adminPass === ADMIN_PASSWORD) {
+        if (data?.profile?.profilePhoto) {
+          localStorage.setItem("rolebit_profile_photo", data.profile.profilePhoto);
+        } else {
+          localStorage.removeItem("rolebit_profile_photo");
+        }
+
+        if (data.isAdmin === true) {
           localStorage.setItem("rolebit_admin", "true");
+          showTopNotification("Signed in");
           window.location.href = "dashboard.html";
         } else {
+          localStorage.removeItem("rolebit_admin");
+          showTopNotification("Signed in");
           window.location.href = "coming-soon.html";
         }
       } else {
@@ -195,12 +167,28 @@ function loadUser() {
     if (l) l.style.display = "inline";
   }
 
-  const protectedPages = ["dashboard", "projects"];
+  const protectedPages = ["dashboard", "projects", "circle", "profile", "calendar", "timeline", "github"];
   const isProtected = protectedPages.some(p => location.pathname.includes(p));
 
   if (!u && isProtected) {
     window.location.href = "signin.html";
   }
+}
+
+function renderSidebarProfileShortcut() {
+  const user = String(localStorage.getItem("rolebit_user") || "").trim();
+  if (!user) return;
+
+  const photo = String(localStorage.getItem("rolebit_profile_photo") || "").trim();
+  const initials = user.slice(0, 1).toUpperCase();
+
+  document.querySelectorAll(".signin-logo").forEach((container) => {
+    container.innerHTML = `
+      <a href="profile.html" title="Profile" aria-label="Open profile">
+        ${photo ? `<img src="${photo}" alt="Profile Photo" class="sidebar-profile-avatar">` : `<span class="sidebar-profile-fallback">${initials}</span>`}
+      </a>
+    `;
+  });
 }
 
 function logout() {
@@ -211,6 +199,26 @@ function logout() {
 
 function goWaitlist() {
   window.location.href = "waitlist.html";
+}
+
+function wireAuthButtons() {
+  const signupBtn = document.getElementById("signupBtn");
+  if (signupBtn && !signupBtn.dataset.wired) {
+    signupBtn.dataset.wired = "true";
+    signupBtn.addEventListener("click", signup);
+  }
+
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn && !loginBtn.dataset.wired) {
+    loginBtn.dataset.wired = "true";
+    loginBtn.addEventListener("click", login);
+  }
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn && !logoutBtn.dataset.wired) {
+    logoutBtn.dataset.wired = "true";
+    logoutBtn.addEventListener("click", logout);
+  }
 }
 
 /* ---------- YOUR EXISTING ANIMATIONS ---------- */
@@ -226,3 +234,5 @@ document.querySelectorAll(".card").forEach(card => observer.observe(card));
 
 /* ---------- AUTO LOAD ---------- */
 loadUser();
+wireAuthButtons();
+renderSidebarProfileShortcut();

@@ -1,7 +1,5 @@
 const API = "http://localhost:3000";
 
-const ADMIN_PASSWORD = "meow1010";
-
 /* ---------- ADMIN FUNCTIONS ---------- */
 
 function toggleAdminInput() {
@@ -15,27 +13,16 @@ function toggleAdminInput() {
 }
 
 function submitAdminPassword() {
-  const password = document.getElementById("adminPassword").value;
   const statusEl = document.getElementById("adminStatus");
-  
-  if (password === ADMIN_PASSWORD) {
-    localStorage.setItem("rolebit_admin", "true");
-    statusEl.innerText = "✓ Unlocked";
-    statusEl.classList.add("active");
-    statusEl.classList.remove("error");
-    
-    // Redirect to dashboard if not already there
-    if (!location.pathname.includes("dashboard")) {
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 500);
-    }
-  } else {
-    statusEl.innerText = "✗ Wrong password";
-    statusEl.classList.add("error");
-    statusEl.classList.remove("active");
-    document.getElementById("adminPassword").value = "";
-  }
+
+  if (!statusEl) return;
+  statusEl.innerText = "Admin access is now assigned by backend username. Sign in to continue.";
+  statusEl.classList.remove("error");
+  statusEl.classList.add("active");
+
+  setTimeout(() => {
+    window.location.href = "signin.html";
+  }, 800);
 }
 
 function isAdmin() {
@@ -75,7 +62,6 @@ async function signup() {
 function login() {
   const username = document.getElementById("loginUser").value;
   const password = document.getElementById("loginPass").value;
-  const adminPass = document.getElementById("adminPass").value;
 
   fetch("http://localhost:3000/login", {
     method: "POST",
@@ -86,12 +72,12 @@ function login() {
   .then(data => {
     if (data.success) {
   localStorage.setItem("rolebit_user", data.username);  // MATCH HOME PAGE
-  
-  // Check if admin password is correct
-  if (adminPass === ADMIN_PASSWORD) {
+
+  if (data.isAdmin === true) {
     localStorage.setItem("rolebit_admin", "true");
     window.location.href = "dashboard.html";
   } else {
+    localStorage.removeItem("rolebit_admin");
     window.location.href = "coming-soon.html";
   }
 }
@@ -128,6 +114,26 @@ function logout() {
 
 function goWaitlist() {
   window.location.href = "waitlist.html";
+}
+
+function wireAuthButtons() {
+  const signupBtn = document.getElementById("signupBtn");
+  if (signupBtn && !signupBtn.dataset.wired) {
+    signupBtn.dataset.wired = "true";
+    signupBtn.addEventListener("click", signup);
+  }
+
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn && !loginBtn.dataset.wired) {
+    loginBtn.dataset.wired = "true";
+    loginBtn.addEventListener("click", login);
+  }
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn && !logoutBtn.dataset.wired) {
+    logoutBtn.dataset.wired = "true";
+    logoutBtn.addEventListener("click", logout);
+  }
 }
 
 /* ---------- YOUR EXISTING ANIMATIONS ---------- */
@@ -182,3 +188,4 @@ renderNextTask();
 
 /* ---------- AUTO LOAD ---------- */
 loadUser();
+wireAuthButtons();

@@ -131,6 +131,7 @@
       grid-template-columns: 1.3fr 1fr;
       gap: 18px;
       align-items: stretch;
+      min-width: 0;
     }
 
     .panel {
@@ -139,6 +140,7 @@
       border-radius: 16px;
       padding: 18px;
       backdrop-filter: blur(12px);
+      min-width: 0;
     }
 
     .panel h2 {
@@ -212,6 +214,8 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .timeline-item,
@@ -222,6 +226,26 @@
       padding: 10px;
       color: rgba(225, 238, 255, 0.9);
       font-size: 0.9rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    #projectDetails,
+    #projectTimeline,
+    .project-name,
+    .project-meta,
+    .detail-title,
+    .detail-copy {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .detail-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
     .timeline-wrap {
@@ -443,9 +467,11 @@
   <img src="logo.png" class="logo-img" alt="Rolebit Logo">
   <a href="dashboard.html">Dashboard</a>
   <a href="my-projects.html">My Projects</a>
+  <a href="github.html">GitHub</a>
+  <a href="circle.html">Circle</a>
+  <a href="profile.html">Profile</a>
   <a href="calendar.html">Calendar</a>
   <a href="timeline.html">Timeline</a>
-  <a href="index.html">Home</a>
 
   <div class="signin-logo">
     <a href="#" onclick="logout(); return false;" title="Logout">L</a>
@@ -486,7 +512,7 @@
 
 <script src="script.js"></script>
 <script>
-  const user = localStorage.getItem("rolebit_user");
+  const user = String(localStorage.getItem("rolebit_user") || "").trim();
   if (!user) {
     window.location.href = "signin.html";
   }
@@ -689,8 +715,10 @@
           <textarea id="editSummary" class="edit-textarea" ${disabled}>${escapeHtml(project.summary)}</textarea>
         </label>
       </div>
-      <div style="margin-top:10px;"><button class="pill-btn" type="button" onclick="window.location.href='project-detail.html?projectId=${encodeURIComponent(project.id)}'">Open Project Detail Page</button></div>
-      ${project.isOwned ? '<button id="saveProjectBtn" class="pill-btn primary" type="button">Save Project</button>' : '<div class="detail-mini">Shared project: view only</div>'}
+      <div class="detail-actions">
+        <button class="pill-btn" type="button" onclick="window.location.href='project-detail.html?projectId=${encodeURIComponent(project.id)}'">Open Project Detail Page</button>
+        ${project.isOwned ? '<button id="saveProjectBtn" class="pill-btn primary" type="button">Save Project</button>' : '<div class="detail-mini">Shared project: view only</div>'}
+      </div>
     `;
   }
 

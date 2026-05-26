@@ -1,7 +1,7 @@
 [
   {
     "username": "evarg22",
-    "password": "eric1234"
+    "passwordHash": "$2b$12$sS2QWpMZq3kyyKRN8QA5TON96jiKx.d9dR8YGYsiBWJvWGgnbehvG"
   },
   {
     "username": "yourmma",
@@ -21,6 +21,11 @@
   },
   {
     "username": "evarg23",
-    "password": "eric1234"
+    "passwordHash": "$2b$12$F4S62i7U.7qkByLd0trPBuxwwYB0xHGV8TzJTnN1oTMuml7mj2Rq."
+  },
+  {
+    "username": "sec_test_1779769788",
+    "passwordHash": "$2b$12$EJcjx5P.Xg8ueqoEXzn3Wu5AJx0wREFeWnGtyRJSiRKJidTE8gTTK",
+    "createdAt": "2026-05-26T04:29:48.577Z"
   }
 ]

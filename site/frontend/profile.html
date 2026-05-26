@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Profile</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+      color: #f6fbff;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      border-color: rgba(118, 216, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 28px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .panel {
+      background: rgba(18, 29, 49, 0.84);
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .subpanel {
+      background: rgba(10, 18, 31, 0.72);
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .title {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: rgba(208, 228, 244, 0.78);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .layout {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: rgba(191, 219, 246, 0.88);
+      font-size: 0.82rem;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .field input,
+    .field textarea {
+      border: 1px solid rgba(130, 202, 255, 0.3);
+      background: rgba(8, 14, 28, 0.88);
+      color: rgba(236, 246, 255, 0.96);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+
+    .field textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    .pill-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pill-btn.primary {
+      background: rgba(67, 118, 170, 0.54);
+      border-color: rgba(141, 217, 255, 0.72);
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .status {
+      margin-top: 6px;
+      color: rgba(201, 229, 249, 0.88);
+      font-size: 0.84rem;
+      font-family: 'Manrope', sans-serif;
+      min-height: 18px;
+    }
+
+    .profile-photo-wrap {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .profile-photo {
+      width: 78px;
+      height: 78px;
+      border-radius: 999px;
+      border: 1px solid rgba(130, 202, 255, 0.4);
+      background: rgba(8, 14, 28, 0.88);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      color: rgba(236, 246, 255, 0.9);
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .profile-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 999px;
+    }
+
+    .password-grid {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .cropper-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.72);
+      z-index: 12000;
+      padding: 16px;
+    }
+
+    .cropper-shell {
+      width: min(920px, 100%);
+      border-radius: 14px;
+      border: 1px solid rgba(118, 216, 255, 0.26);
+      background: rgba(8, 14, 28, 0.95);
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr 170px;
+      gap: 12px;
+    }
+
+    .cropper-stage {
+      min-height: 360px;
+      max-height: 60vh;
+      overflow: hidden;
+      border-radius: 10px;
+      border: 1px solid rgba(118, 216, 255, 0.2);
+      background: rgba(5, 9, 18, 0.8);
+    }
+
+    .cropper-stage img {
+      display: block;
+      max-width: 100%;
+    }
+
+    .crop-preview-wrap {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .crop-preview {
+      width: 140px;
+      height: 140px;
+      border-radius: 999px;
+      border: 1px solid rgba(118, 216, 255, 0.3);
+      overflow: hidden;
+      background: rgba(5, 9, 18, 0.9);
+      margin-inline: auto;
+    }
+
+    .crop-help {
+      color: rgba(201, 229, 249, 0.88);
+      font-size: 0.82rem;
+      text-align: center;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .crop-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .cropper-view-box,
+    .cropper-face {
+      border-radius: 50%;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .password-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cropper-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .page-wrap {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="github.html">GitHub</a>
+    <a href="circle.html">Circle</a>
+    <a href="profile.html" class="active">Profile</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="timeline.html">Timeline</a>
+
+    <div class="signin-logo"></div>
+  </div>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h1 class="title">Profile</h1>
+      <p class="subtitle">Manage your account details, university, enrolled courses, and password.</p>
+
+      <div class="layout">
+        <section class="subpanel full">
+          <h3 class="title" style="font-size:1.1rem;">Identity</h3>
+          <div class="profile-photo-wrap" style="margin-top:10px;">
+            <div id="profilePhotoPreview" class="profile-photo">?</div>
+            <label class="field" style="min-width:260px;">
+              Profile Photo (circle)
+              <input id="profilePhotoInput" type="file" accept="image/*">
+            </label>
+            <button id="clearPhotoBtn" class="pill-btn" type="button">Remove Photo</button>
+          </div>
+        </section>
+
+        <label class="field">
+          First Name
+          <input id="firstName" type="text" placeholder="First name">
+        </label>
+
+        <label class="field">
+          Last Name
+          <input id="lastName" type="text" placeholder="Last name">
+        </label>
+
+        <label class="field">
+          Email
+          <input id="email" type="email" placeholder="Email">
+        </label>
+
+        <label class="field">
+          University
+          <input id="university" type="text" placeholder="University">
+        </label>
+
+        <label class="field full">
+          Currently Enrolled Courses
+          <textarea id="enrolledCourses" placeholder="Comma-separated, e.g. CS101, MATH210, PHYS130"></textarea>
+        </label>
+
+        <div class="actions full">
+          <button id="saveProfileBtn" class="pill-btn primary" type="button">Save Profile</button>
+          <button id="logoutBtn" class="pill-btn" type="button">Logout</button>
+          <span id="profileStatus" class="status"></span>
+        </div>
+
+        <section class="subpanel full">
+          <h3 class="title" style="font-size:1.1rem;">Change Password</h3>
+          <div class="password-grid">
+            <label class="field">
+              Old Password
+              <input id="oldPassword" type="password" placeholder="Current password">
+            </label>
+            <label class="field">
+              New Password
+              <input id="newPassword" type="password" placeholder="New password">
+            </label>
+            <label class="field">
+              Confirm New Password
+              <input id="confirmPassword" type="password" placeholder="Repeat new password">
+            </label>
+          </div>
+          <div class="actions">
+            <button id="changePasswordBtn" class="pill-btn" type="button">Update Password</button>
+            <span id="passwordStatus" class="status"></span>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="cropperModal" class="cropper-modal" aria-hidden="true">
+    <div class="cropper-shell">
+      <div class="cropper-stage">
+        <img id="cropperImage" alt="Crop source">
+      </div>
+      <div class="crop-preview-wrap">
+        <div class="crop-preview" id="cropPreview"></div>
+        <div class="crop-help">Move and zoom, then apply to keep a circular profile photo.</div>
+        <div class="crop-actions">
+          <button id="applyCropBtn" class="pill-btn primary" type="button">Apply Crop</button>
+          <button id="cancelCropBtn" class="pill-btn" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script>
+    const API = "http://localhost:3000";
+    const user = String(localStorage.getItem("rolebit_user") || "").trim();
+    if (!user) window.location.href = "signin.html";
+
+    let currentPhoto = "";
+    let cropper = null;
+
+    function profileCacheKey() {
+      return `rolebit_profile_cache_${user.toLowerCase()}`;
+    }
+
+    function loadProfileCache() {
+      try {
+        const raw = localStorage.getItem(profileCacheKey());
+        return raw ? JSON.parse(raw) : null;
+      } catch (_err) {
+        return null;
+      }
+    }
+
+    function saveProfileCache(profile) {
+      try {
+        localStorage.setItem(profileCacheKey(), JSON.stringify(profile || {}));
+      } catch (_err) {}
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function fetchJson(url, options) {
+      const res = await fetch(url, options);
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_err) {}
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      return data;
+    }
+
+    function renderPhoto(photo, username) {
+      const node = document.getElementById("profilePhotoPreview");
+      if (!node) return;
+      if (photo) {
+        node.innerHTML = `<img src="${photo}" alt="Profile Photo">`;
+      } else {
+        const initials = String(username || "?").slice(0, 1).toUpperCase();
+        node.textContent = initials;
+      }
+    }
+
+    function hydrateProfileForm(profile) {
+      const safe = profile || {};
+      document.getElementById("firstName").value = safe.firstName || "";
+      document.getElementById("lastName").value = safe.lastName || "";
+      document.getElementById("email").value = safe.email || "";
+      document.getElementById("university").value = safe.university || "";
+      document.getElementById("enrolledCourses").value = Array.isArray(safe.enrolledCourses)
+        ? safe.enrolledCourses.join(", ")
+        : (safe.course || "");
+
+      currentPhoto = safe.profilePhoto || "";
+      if (currentPhoto) {
+        localStorage.setItem("rolebit_profile_photo", currentPhoto);
+      } else {
+        localStorage.removeItem("rolebit_profile_photo");
+      }
+      renderPhoto(currentPhoto, user);
+    }
+
+    async function ensureCropperLoaded() {
+      if (typeof window.Cropper === "function") return true;
+
+      const sources = [
+        "https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js",
+        "https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"
+      ];
+
+      for (const src of sources) {
+        try {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = src;
+            s.async = true;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+
+          if (typeof window.Cropper === "function") {
+            return true;
+          }
+        } catch (_err) {}
+      }
+
+      return typeof window.Cropper === "function";
+    }
+
+    function closeCropper() {
+      const modal = document.getElementById("cropperModal");
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+      if (modal) {
+        modal.style.display = "none";
+        modal.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    async function openCropper(dataUrl) {
+      const modal = document.getElementById("cropperModal");
+      const image = document.getElementById("cropperImage");
+      if (!modal || !image) return;
+
+      const status = document.getElementById("profileStatus");
+      const cropperReady = await ensureCropperLoaded();
+      if (!cropperReady) {
+        // Fallback: keep image workflow working even if CDN is blocked.
+        currentPhoto = dataUrl;
+        renderPhoto(currentPhoto, user);
+        if (status) status.textContent = "Crop tool could not load, photo applied without crop.";
+        if (typeof showTopNotification === "function") {
+          showTopNotification("Photo selected", "success");
+        }
+        return;
+      }
+
+      image.src = dataUrl;
+      modal.style.display = "flex";
+      modal.setAttribute("aria-hidden", "false");
+
+      if (cropper) {
+        cropper.destroy();
+      }
+
+      cropper = new Cropper(image, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: "move",
+        background: false,
+        autoCropArea: 1,
+        responsive: true,
+        preview: "#cropPreview"
+      });
+    }
+
+    function applyCrop() {
+      if (!cropper) return;
+      const canvas = cropper.getCroppedCanvas({
+        width: 512,
+        height: 512,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: "high"
+      });
+
+      if (!canvas) return;
+      currentPhoto = canvas.toDataURL("image/jpeg", 0.9);
+      renderPhoto(currentPhoto, user);
+      if (typeof showTopNotification === "function") {
+        showTopNotification("Photo cropped", "success");
+      }
+      closeCropper();
+    }
+
+    async function loadProfile() {
+      const status = document.getElementById("profileStatus");
+      const cached = loadProfileCache();
+      if (cached) {
+        hydrateProfileForm(cached);
+      }
+
+      try {
+        const data = await fetchJson(`${API}/profile?username=${encodeURIComponent(user)}`);
+        const apiProfile = data.profile || {};
+        const merged = {
+          ...(cached || {}),
+          ...apiProfile,
+          enrolledCourses: Array.isArray(apiProfile.enrolledCourses) && apiProfile.enrolledCourses.length
+            ? apiProfile.enrolledCourses
+            : (Array.isArray(cached?.enrolledCourses) ? cached.enrolledCourses : []),
+          profilePhoto: apiProfile.profilePhoto || cached?.profilePhoto || ""
+        };
+
+        hydrateProfileForm(merged);
+        saveProfileCache(merged);
+        status.textContent = "";
+      } catch (err) {
+        if (cached) {
+          status.textContent = "Loaded saved profile cache (backend unavailable).";
+        } else {
+          status.textContent = err.message;
+        }
+      }
+    }
+
+    async function saveProfile() {
+      const status = document.getElementById("profileStatus");
+      const payload = {
+        username: user,
+        firstName: document.getElementById("firstName").value.trim(),
+        lastName: document.getElementById("lastName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        university: document.getElementById("university").value.trim(),
+        enrolledCourses: document.getElementById("enrolledCourses").value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        profilePhoto: currentPhoto
+      };
+
+      try {
+        const data = await fetchJson(`${API}/profile`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const profile = data.profile || {};
+        hydrateProfileForm(profile);
+        saveProfileCache(profile);
+        status.textContent = "Profile saved.";
+        if (typeof showTopNotification === "function") {
+          showTopNotification("Profile updated", "success");
+        }
+      } catch (err) {
+        status.textContent = err.message;
+      }
+    }
+
+    async function changePassword() {
+      const status = document.getElementById("passwordStatus");
+      const oldPassword = document.getElementById("oldPassword").value;
+      const newPassword = document.getElementById("newPassword").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (!oldPassword || !newPassword || !confirmPassword) {
+        status.textContent = "Fill all password fields.";
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        status.textContent = "New passwords do not match.";
+        return;
+      }
+
+      try {
+        await fetchJson(`${API}/profile/password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: user, oldPassword, newPassword, confirmPassword })
+        });
+        document.getElementById("oldPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+        status.textContent = "Password updated.";
+        if (typeof showTopNotification === "function") {
+          showTopNotification("Password updated", "success");
+        }
+      } catch (err) {
+        status.textContent = err.message;
+      }
+    }
+
+    async function onPhotoInput(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        document.getElementById("profileStatus").textContent = "Please choose an image file.";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = String(reader.result || "");
+        await openCropper(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById("profilePhotoInput").addEventListener("change", onPhotoInput);
+    document.getElementById("clearPhotoBtn").addEventListener("click", () => {
+      currentPhoto = "";
+      localStorage.removeItem("rolebit_profile_photo");
+      renderPhoto(currentPhoto, user);
+      if (typeof showTopNotification === "function") {
+        showTopNotification("Photo removed", "success");
+      }
+    });
+    document.getElementById("applyCropBtn").addEventListener("click", applyCrop);
+    document.getElementById("cancelCropBtn").addEventListener("click", closeCropper);
+    document.getElementById("cropperModal").addEventListener("click", (event) => {
+      if (event.target && event.target.id === "cropperModal") {
+        closeCropper();
+      }
+    });
+    document.getElementById("saveProfileBtn").addEventListener("click", saveProfile);
+    document.getElementById("changePasswordBtn").addEventListener("click", changePassword);
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      logout();
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

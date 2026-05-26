@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - Circle</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+      color: #f6fbff;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      border-color: rgba(118, 216, 255, 0.3);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 28px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .panel {
+      background: rgba(18, 29, 49, 0.84);
+      border: 1px solid rgba(118, 216, 255, 0.24);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+    }
+
+    .title {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: rgba(208, 228, 244, 0.78);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .layout {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: rgba(191, 219, 246, 0.88);
+      font-size: 0.82rem;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .field input,
+    .field select {
+      border: 1px solid rgba(130, 202, 255, 0.3);
+      background: rgba(8, 14, 28, 0.88);
+      color: rgba(236, 246, 255, 0.96);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+
+    .pill-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pill-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .card-list {
+      margin-top: 8px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .card {
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      border-radius: 12px;
+      background: rgba(8, 17, 31, 0.65);
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-weight: 700;
+      color: rgba(240, 248, 255, 0.96);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .card-meta,
+    .status,
+    .empty {
+      color: rgba(201, 229, 249, 0.88);
+      font-size: 0.84rem;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .page-wrap {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="github.html">GitHub</a>
+    <a href="circle.html" class="active">Circle</a>
+    <a href="profile.html">Profile</a>
+    <a href="timeline.html">Timeline</a>
+    <a href="calendar.html">Calendar</a>
+  </div>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h1 class="title">Circle</h1>
+      <p class="subtitle">Find people from your same university, invite them to a project, and let them accept to join.</p>
+
+      <div class="layout">
+        <section class="panel">
+          <h3 class="card-title">Profile Matching</h3>
+          <div class="card-meta">Circle invites are limited to users from your same university.</div>
+          <div class="actions" style="margin-top: 10px;">
+            <a class="pill-btn" href="profile.html">Open Profile Settings</a>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3 class="card-title">Invite To Project</h3>
+          <label class="field" for="projectSelect">
+            Select one of your projects
+            <select id="projectSelect">
+              <option value="">Loading projects...</option>
+            </select>
+          </label>
+          <div id="inviteStatus" class="status" style="margin-top: 10px;"></div>
+          <div id="candidateList" class="card-list"></div>
+        </section>
+
+        <section class="panel full">
+          <h3 class="card-title">Incoming Invites</h3>
+          <div id="incomingList" class="card-list"></div>
+        </section>
+
+        <section class="panel full">
+          <h3 class="card-title">Sent Invites</h3>
+          <div id="sentList" class="card-list"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+  <script>
+    const API = "http://localhost:3000";
+    const user = String(localStorage.getItem("rolebit_user") || "").trim();
+    if (!user) window.location.href = "signin.html";
+
+    let ownedProjects = [];
+    let selectedProjectId = "";
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function userKey(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (_err) {}
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+      return data;
+    }
+
+    function renderProjectOptions() {
+      const select = document.getElementById("projectSelect");
+      if (!ownedProjects.length) {
+        select.innerHTML = '<option value="">No owned projects found</option>';
+        return;
+      }
+
+      select.innerHTML = ownedProjects.map((project) => {
+        return `<option value="${project.id}">${escapeHtml(project.title)}</option>`;
+      }).join("");
+
+      if (!selectedProjectId || !ownedProjects.some((item) => String(item.id) === String(selectedProjectId))) {
+        selectedProjectId = String(ownedProjects[0].id);
+      }
+      select.value = selectedProjectId;
+    }
+
+    async function loadOwnedProjects() {
+      const data = await fetchJson(`${API}/projects?username=${encodeURIComponent(user)}`);
+      const all = Array.isArray(data.projects) ? data.projects : [];
+      ownedProjects = all.filter((project) => userKey(project.ownerUsername) === userKey(user));
+      renderProjectOptions();
+    }
+
+    async function sendInvite(targetUsername) {
+      const status = document.getElementById("inviteStatus");
+      try {
+        await fetchJson(`${API}/projects/${encodeURIComponent(selectedProjectId)}/invites`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: user, toUsername: targetUsername })
+        });
+        status.textContent = `Invite sent to ${targetUsername}.`;
+        if (typeof showTopNotification === "function") {
+          showTopNotification(`Invite sent to ${targetUsername}`, "success");
+        }
+        await Promise.all([loadCandidates(), loadInvites()]);
+      } catch (err) {
+        status.textContent = err.message;
+      }
+    }
+
+    async function loadCandidates() {
+      const status = document.getElementById("inviteStatus");
+      const list = document.getElementById("candidateList");
+
+      if (!selectedProjectId) {
+        list.innerHTML = '<div class="empty">Choose a project first.</div>';
+        return;
+      }
+
+      status.textContent = "Loading people from your same university...";
+      try {
+        const data = await fetchJson(`${API}/circle/candidates?username=${encodeURIComponent(user)}&projectId=${encodeURIComponent(selectedProjectId)}`);
+        const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+
+        if (!candidates.length) {
+          list.innerHTML = '<div class="empty">No eligible people found yet. Make sure your university is set in profile and other users share it.</div>';
+        } else {
+          list.innerHTML = candidates.map((candidate) => {
+            const fullName = `${candidate.firstName || ""} ${candidate.lastName || ""}`.trim();
+            return `
+              <article class="card">
+                <div class="card-title">${escapeHtml(fullName || candidate.username)}</div>
+                <div class="card-meta">@${escapeHtml(candidate.username)} | ${escapeHtml(candidate.university || "No university set")}</div>
+                <div class="actions">
+                  <button class="pill-btn" type="button" data-invite="${escapeHtml(candidate.username)}">Send Invite</button>
+                </div>
+              </article>
+            `;
+          }).join("");
+        }
+
+        status.textContent = `Eligible people: ${candidates.length}`;
+      } catch (err) {
+        list.innerHTML = '<div class="empty">Could not load candidates.</div>';
+        status.textContent = err.message;
+      }
+    }
+
+    async function respondInvite(inviteId, action) {
+      await fetchJson(`${API}/invites/${encodeURIComponent(inviteId)}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user })
+      });
+      if (typeof showTopNotification === "function") {
+        showTopNotification(action === "accept" ? "Invite accepted" : "Invite declined", "success");
+      }
+      await Promise.all([loadInvites(), loadOwnedProjects(), loadCandidates()]);
+    }
+
+    function renderIncoming(incoming) {
+      const list = document.getElementById("incomingList");
+      if (!incoming.length) {
+        list.innerHTML = '<div class="empty">No incoming invites.</div>';
+        return;
+      }
+
+      list.innerHTML = incoming.map((invite) => {
+        const pending = invite.status === "pending";
+        return `
+          <article class="card">
+            <div class="card-title">${escapeHtml(invite.projectTitle)}</div>
+            <div class="card-meta">From @${escapeHtml(invite.fromUsername)} | Status: ${escapeHtml(invite.status)}</div>
+            <div class="actions">
+              <button class="pill-btn" type="button" data-accept="${invite.id}" ${pending ? "" : "disabled"}>Accept</button>
+              <button class="pill-btn" type="button" data-decline="${invite.id}" ${pending ? "" : "disabled"}>Decline</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderSent(sent) {
+      const list = document.getElementById("sentList");
+      if (!sent.length) {
+        list.innerHTML = '<div class="empty">No sent invites yet.</div>';
+        return;
+      }
+
+      list.innerHTML = sent.map((invite) => {
+        return `
+          <article class="card">
+            <div class="card-title">${escapeHtml(invite.projectTitle)}</div>
+            <div class="card-meta">To @${escapeHtml(invite.toUsername)} | Status: ${escapeHtml(invite.status)}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadInvites() {
+      const data = await fetchJson(`${API}/invites?username=${encodeURIComponent(user)}`);
+      renderIncoming(Array.isArray(data.incoming) ? data.incoming : []);
+      renderSent(Array.isArray(data.sent) ? data.sent : []);
+    }
+
+    document.getElementById("projectSelect").addEventListener("change", (event) => {
+      selectedProjectId = String(event.target.value || "");
+      loadCandidates();
+    });
+
+    document.getElementById("candidateList").addEventListener("click", (event) => {
+      const target = event.target.closest("button[data-invite]");
+      if (!target) return;
+      sendInvite(target.getAttribute("data-invite") || "");
+    });
+
+    document.getElementById("incomingList").addEventListener("click", (event) => {
+      const acceptBtn = event.target.closest("button[data-accept]");
+      if (acceptBtn) {
+        respondInvite(acceptBtn.getAttribute("data-accept"), "accept");
+        return;
+      }
+      const declineBtn = event.target.closest("button[data-decline]");
+      if (declineBtn) {
+        respondInvite(declineBtn.getAttribute("data-decline"), "decline");
+      }
+    });
+
+    (async function init() {
+      try {
+        await loadOwnedProjects();
+        await Promise.all([loadCandidates(), loadInvites()]);
+      } catch (err) {
+        document.getElementById("inviteStatus").textContent = err.message;
+      }
+    })();
+  </script>
+</body>
+</html>

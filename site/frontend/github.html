@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rolebit - GitHub</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="page-loader.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@500;700&display=swap');
+
+    :root {
+      --txt: #f6fbff;
+      --muted: rgba(208, 228, 244, 0.78);
+      --shell: rgba(18, 29, 49, 0.84);
+      --line: rgba(118, 216, 255, 0.28);
+      --card: rgba(8, 17, 31, 0.84);
+    }
+
+    html {
+      min-height: 100%;
+      background: #050807;
+    }
+
+    body {
+      min-height: 100%;
+      background: transparent;
+      position: relative;
+      isolation: isolate;
+      color: var(--txt);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(18, 55, 35, 0.48), transparent 36%),
+        radial-gradient(circle at 74% 22%, rgba(35, 95, 70, 0.16), transparent 32%),
+        radial-gradient(circle at 84% 82%, rgba(12, 42, 25, 0.42), transparent 38%),
+        linear-gradient(180deg, #070a08, #040606);
+      background-size: 160% 160%;
+      animation: calmGradientDrift 90s ease-in-out infinite alternate;
+      z-index: -1;
+    }
+
+    @keyframes calmGradientDrift {
+      0% { background-position: 0% 0%, 80% 20%, 100% 100%, 50% 50%; }
+      50% { background-position: 30% 10%, 60% 40%, 70% 80%, 50% 50%; }
+      100% { background-position: 60% 20%, 40% 60%, 40% 60%, 50% 50%; }
+    }
+
+    .sidebar {
+      left: 12px;
+      top: 12px;
+      height: calc(100vh - 24px);
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(13, 22, 39, 0.95), rgba(10, 16, 30, 0.95));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .sidebar a {
+      border-radius: 999px;
+      margin: 6px 0;
+      border: 1px solid transparent;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      border-color: var(--line);
+      background: rgba(17, 43, 68, 0.8);
+    }
+
+    .page-wrap {
+      margin-left: 84px;
+      padding: 28px;
+      min-height: 100vh;
+      transition: margin-left 0.35s ease;
+    }
+
+    .sidebar:hover ~ .page-wrap {
+      margin-left: 234px;
+    }
+
+    .panel {
+      background: var(--shell);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .title {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toolbar {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .pill-btn {
+      border: 1.25px solid rgba(111, 201, 255, 0.54);
+      background: rgba(47, 88, 130, 0.34);
+      color: rgba(229, 243, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 20px;
+      color: rgba(204, 235, 255, 0.9);
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.85rem;
+    }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .repo-card {
+      border: 1px solid rgba(118, 216, 255, 0.22);
+      border-radius: 12px;
+      background: var(--card);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .repo-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      color: rgba(240, 248, 255, 0.96);
+    }
+
+    .repo-meta,
+    .empty,
+    .linked {
+      color: rgba(201, 229, 249, 0.88);
+      font-size: 0.84rem;
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      margin-top: 22px;
+      margin-bottom: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 860px) {
+      .page-wrap {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="logo.png" class="logo-img" alt="Rolebit Logo">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="my-projects.html">My Projects</a>
+    <a href="github.html" class="active">GitHub</a>
+    <a href="circle.html">Circle</a>
+    <a href="profile.html">Profile</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="timeline.html">Timeline</a>
+
+    <div class="signin-logo">
+      <a href="#" onclick="logout(); return false;" title="Logout">L</a>
+    </div>
+  </div>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h1 class="title">GitHub Repositories</h1>
+      <p class="subtitle">Review imported repositories, open source links, and jump to linked project pages.</p>
+
+      <div class="toolbar">
+        <button id="refreshBtn" class="pill-btn" type="button">Refresh From GitHub</button>
+        <a class="pill-btn" href="add-project.html">Add Project</a>
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <h2 class="section-title">Imported Repositories</h2>
+      <div id="repoGrid" class="grid"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+  <script>
+    const API_BASE = "http://localhost:3000";
+    const user = String(localStorage.getItem("rolebit_user") || "").trim();
+
+    if (!user) {
+      window.location.href = "signin.html";
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function parseGitHubRepoKey(rawValue) {
+      const value = String(rawValue || "").trim();
+      if (!value) return "";
+
+      const sshMatch = value.match(/^git@github\.com:([^/\s]+)\/([^\s]+?)(?:\.git)?$/i);
+      if (sshMatch) {
+        return `${sshMatch[1].toLowerCase()}/${sshMatch[2].replace(/\.git$/i, "").toLowerCase()}`;
+      }
+
+      const shorthandMatch = value.match(/^([^/\s]+)\/([^\s]+)$/);
+      if (shorthandMatch && !value.startsWith("http")) {
+        return `${shorthandMatch[1].toLowerCase()}/${shorthandMatch[2].replace(/\.git$/i, "").toLowerCase()}`;
+      }
+
+      try {
+        const parsed = new URL(value);
+        const host = String(parsed.hostname || "").toLowerCase();
+        if (host !== "github.com" && host !== "www.github.com") return "";
+        const parts = String(parsed.pathname || "").split("/").filter(Boolean);
+        if (parts.length < 2) return "";
+        const owner = String(parts[0] || "").toLowerCase();
+        const repo = String(parts[1] || "").replace(/\.git$/i, "").toLowerCase();
+        if (!owner || !repo) return "";
+        return `${owner}/${repo}`;
+      } catch (_err) {
+        return "";
+      }
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "x-rolebit-user": user,
+          ...(options.headers || {})
+        }
+      });
+
+      if (!response.ok) {
+        let message = `Request failed (${response.status})`;
+        try {
+          const data = await response.json();
+          if (data && data.error) message = data.error;
+        } catch (_err) {}
+        throw new Error(message);
+      }
+
+      return response.json();
+    }
+
+    function buildProjectByRepoKey(projects) {
+      const map = new Map();
+      (Array.isArray(projects) ? projects : []).forEach((project) => {
+        const key = parseGitHubRepoKey(project.gitRepoUrl);
+        if (!key || map.has(key)) return;
+        map.set(key, project);
+      });
+      return map;
+    }
+
+    function renderRepos(repos, projectByRepoKey) {
+      const grid = document.getElementById("repoGrid");
+      if (!Array.isArray(repos) || !repos.length) {
+        grid.innerHTML = '<div class="empty">No imported repositories found yet.</div>';
+        return;
+      }
+
+      grid.innerHTML = repos.map((repo) => {
+        const fullName = repo.fullName || `${repo.owner || ""}/${repo.name || ""}`;
+        const key = parseGitHubRepoKey(fullName);
+        const linkedProject = projectByRepoKey.get(key) || null;
+        const visibility = repo.private ? "Private" : "Public";
+        const branch = repo.defaultBranch || "main";
+
+        return `
+          <article class="repo-card">
+            <div class="repo-title">${escapeHtml(fullName)}</div>
+            <div class="repo-meta">${escapeHtml(visibility)} | Default branch: ${escapeHtml(branch)}</div>
+            <div class="linked">${linkedProject ? `Linked Project: ${escapeHtml(linkedProject.title || "Untitled")}` : "Linked Project: Not linked yet"}</div>
+            <div class="actions">
+              <a class="pill-btn" href="${escapeHtml(repo.htmlUrl || "#")}" target="_blank" rel="noopener">Open Repo</a>
+              ${linkedProject
+                ? `<a class="pill-btn" href="project-detail.html?projectId=${encodeURIComponent(linkedProject.id)}">Open Linked Project</a>`
+                : `<a class="pill-btn" href="add-project.html">Create Project</a>`}
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function refresh() {
+      const status = document.getElementById("status");
+      status.textContent = "Loading repositories and linked projects...";
+
+      try {
+        const [reposData, projectsData] = await Promise.all([
+          fetchJson(`${API_BASE}/api/github/repos?username=${encodeURIComponent(user)}&refresh=1`),
+          fetchJson(`${API_BASE}/projects?username=${encodeURIComponent(user)}`)
+        ]);
+
+        const repos = Array.isArray(reposData.repositories) ? reposData.repositories : [];
+        const projects = Array.isArray(projectsData.projects) ? projectsData.projects : [];
+        const projectByRepoKey = buildProjectByRepoKey(projects);
+
+        renderRepos(repos, projectByRepoKey);
+
+        const linkedCount = repos.filter((repo) => {
+          const fullName = repo.fullName || `${repo.owner || ""}/${repo.name || ""}`;
+          return projectByRepoKey.has(parseGitHubRepoKey(fullName));
+        }).length;
+
+        status.textContent = `Imported repos: ${repos.length} | Linked to projects: ${linkedCount}`;
+      } catch (err) {
+        status.textContent = `Could not load GitHub data: ${err.message}`;
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", refresh);
+    refresh();
+  </script>
+</body>
+</html>

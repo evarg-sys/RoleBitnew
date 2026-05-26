@@ -1,13 +1,68 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const bcrypt = require("bcryptjs");
+
+// Load backend env vars for GitHub App integration.
+try {
+  require("dotenv").config({ path: path.join(__dirname, ".env") });
+} catch (_err) {}
+
 const store = require("./services/lmdbStore");
 const githubRoutes = require("./routes/github");
 
 const app = express();
-app.use(cors());
+app.disable("x-powered-by");
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+if (!allowedOrigins.length) {
+  allowedOrigins.push(
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500"
+  );
+}
+
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: false
+}));
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS blocked for this origin"));
+  }
+}));
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Math.max(100, Number(process.env.RATE_LIMIT_MAX || 600)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === "/api/github/webhook"
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Math.max(5, Number(process.env.AUTH_RATE_LIMIT_MAX || 25)),
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use(globalLimiter);
 app.use(express.json({
+  limit: "64kb",
   verify: (req, _res, buf) => {
     req.rawBody = buf.toString("utf8");
   }
@@ -35,6 +90,135 @@ function nowIso() {
 
 function deepCopy(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeUsername(value) {
+  return String(value || "").trim();
+}
+
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function usernameKey(value) {
+  return normalizeUsername(value).toLowerCase();
+}
+
+function textKey(value) {
+  return normalizeText(value).toLowerCase();
+}
+
+function normalizeProfileField(value, maxLength = 120) {
+  return normalizeText(value).slice(0, maxLength);
+}
+
+function normalizeCourseList(value) {
+  const rawList = Array.isArray(value)
+    ? value
+    : String(value || "")
+      .split(",")
+      .map((item) => item.trim());
+
+  const unique = new Set();
+  rawList.forEach((item) => {
+    const safe = normalizeProfileField(item, 80);
+    if (safe) unique.add(safe);
+  });
+
+  return Array.from(unique).slice(0, 20);
+}
+
+function normalizeProfilePhoto(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const okPrefix = raw.startsWith("data:image/");
+  if (!okPrefix) return "";
+
+  // Keep profile photo payload bounded for JSON storage safety.
+  if (raw.length > 1_500_000) return "";
+  return raw;
+}
+
+function findUserRecord(users, username) {
+  const target = usernameKey(username);
+  if (!target) return null;
+  return users.find((item) => usernameKey(item.username) === target) || null;
+}
+
+function userToPublicProfile(user) {
+  if (!user) return null;
+
+  const enrolledCourses = normalizeCourseList(user.enrolledCourses || user.course || "");
+  return {
+    username: normalizeUsername(user.username),
+    firstName: normalizeProfileField(user.firstName, 80),
+    lastName: normalizeProfileField(user.lastName, 80),
+    email: normalizeProfileField(user.email, 160),
+    university: normalizeProfileField(user.university, 120),
+    course: enrolledCourses[0] || "",
+    enrolledCourses,
+    profilePhoto: normalizeProfilePhoto(user.profilePhoto)
+  };
+}
+
+function isSameUniversity(leftUser, rightUser) {
+  const leftUni = textKey(leftUser?.university);
+  const rightUni = textKey(rightUser?.university);
+
+  if (!leftUni || !rightUni) return false;
+  return leftUni === rightUni;
+}
+
+function formatTeamFromMembers(members) {
+  const count = Array.isArray(members) ? members.length : 0;
+  return `Team: ${count} ${count === 1 ? "person" : "people"}`;
+}
+
+const adminUsernames = new Set(
+  String(process.env.ADMIN_USERNAMES || "")
+    .split(",")
+    .map((value) => usernameKey(value))
+    .filter(Boolean)
+);
+
+function isAdminUsername(value) {
+  return adminUsernames.has(usernameKey(value));
+}
+
+function isValidUsername(value) {
+  const username = normalizeUsername(value);
+  return /^[a-zA-Z0-9._-]{3,32}$/.test(username);
+}
+
+function isValidPassword(value) {
+  const password = String(value || "");
+  return password.length >= 8 && password.length <= 128;
+}
+
+function isBcryptHash(value) {
+  return /^\$2[aby]\$\d{2}\$/.test(String(value || ""));
+}
+
+function safePlaintextEqual(a, b) {
+  const left = Buffer.from(String(a || ""), "utf8");
+  const right = Buffer.from(String(b || ""), "utf8");
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(String(password || ""), 12);
+}
+
+async function verifyPassword(storedRecord, incomingPassword) {
+  const passwordHash = String(storedRecord?.passwordHash || "");
+  if (isBcryptHash(passwordHash)) {
+    return bcrypt.compare(String(incomingPassword || ""), passwordHash);
+  }
+
+  const legacy = String(storedRecord?.password || "");
+  return safePlaintextEqual(legacy, incomingPassword);
 }
 
 function normalizeMemberList(members, ownerUsername) {
@@ -70,9 +254,109 @@ function safeProgress(value) {
   return Math.max(0, Math.min(100, Number(value) || 0));
 }
 
+function parseGitHubRepoKey(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) return "";
+
+  // Supports URLs like https://github.com/owner/repo(.git) and shorthand owner/repo.
+  const sshMatch = value.match(/^git@github\.com:([^/\s]+)\/([^\s]+?)(?:\.git)?$/i);
+  if (sshMatch) {
+    return `${sshMatch[1].toLowerCase()}/${sshMatch[2].replace(/\.git$/i, "").toLowerCase()}`;
+  }
+
+  const shorthandMatch = value.match(/^([^/\s]+)\/([^\s]+)$/);
+  if (shorthandMatch && !value.startsWith("http")) {
+    return `${shorthandMatch[1].toLowerCase()}/${shorthandMatch[2].replace(/\.git$/i, "").toLowerCase()}`;
+  }
+
+  try {
+    const parsed = new URL(value);
+    const host = String(parsed.hostname || "").toLowerCase();
+    if (host !== "github.com" && host !== "www.github.com") return "";
+
+    const parts = String(parsed.pathname || "")
+      .split("/")
+      .filter(Boolean);
+
+    if (parts.length < 2) return "";
+    const owner = String(parts[0] || "").toLowerCase();
+    const repo = String(parts[1] || "").replace(/\.git$/i, "").toLowerCase();
+    if (!owner || !repo) return "";
+    return `${owner}/${repo}`;
+  } catch (_err) {
+    return "";
+  }
+}
+
+function findProjectByRepoKey(state, repoKey, ignoreProjectId = null) {
+  if (!repoKey) return null;
+  const ignoreId = Number(ignoreProjectId) || null;
+
+  return state.projects.find((project) => {
+    if (ignoreId && Number(project.id) === ignoreId) return false;
+    return parseGitHubRepoKey(project.gitRepoUrl) === repoKey;
+  }) || null;
+}
+
+function dedupeProjectsByRepoLink() {
+  const state = loadState();
+  if (!Array.isArray(state.projects) || !state.projects.length) return 0;
+
+  const bestByKey = new Map();
+
+  state.projects.forEach((project) => {
+    const repoKey = parseGitHubRepoKey(project.gitRepoUrl);
+    if (!repoKey) return;
+
+    const key = repoKey;
+    const updated = Date.parse(String(project.updatedAt || ""));
+    const created = Date.parse(String(project.createdAt || ""));
+
+    const rank = {
+      updatedAt: Number.isFinite(updated) ? updated : 0,
+      createdAt: Number.isFinite(created) ? created : 0,
+      id: Number(project.id) || 0
+    };
+
+    const existing = bestByKey.get(key);
+    if (!existing) {
+      bestByKey.set(key, { id: Number(project.id), rank });
+      return;
+    }
+
+    const isBetter =
+      rank.updatedAt > existing.rank.updatedAt ||
+      (rank.updatedAt === existing.rank.updatedAt && rank.createdAt > existing.rank.createdAt) ||
+      (rank.updatedAt === existing.rank.updatedAt && rank.createdAt === existing.rank.createdAt && rank.id > existing.rank.id);
+
+    if (isBetter) {
+      bestByKey.set(key, { id: Number(project.id), rank });
+    }
+  });
+
+  const keepIds = new Set(Array.from(bestByKey.values()).map((item) => Number(item.id)));
+  const before = state.projects.length;
+
+  state.projects = state.projects.filter((project) => {
+    const repoKey = parseGitHubRepoKey(project.gitRepoUrl);
+    if (!repoKey) return true;
+    return keepIds.has(Number(project.id));
+  });
+
+  const removed = before - state.projects.length;
+  if (!removed) return 0;
+
+  const maxId = state.projects.reduce((highest, item) => Math.max(highest, Number(item.id) || 0), 0);
+  state.nextProjectId = Math.max(maxId + 1, 1);
+  saveState(state);
+  return removed;
+}
+
 function createState() {
   return {
     nextProjectId: 1,
+    nextInviteId: 1,
+    invitations: [],
     projects: []
   };
 }
@@ -84,6 +368,19 @@ function loadState() {
     store.putSync("state", fresh);
     return fresh;
   }
+
+  if (!Array.isArray(state.invitations)) {
+    state.invitations = [];
+  }
+
+  const maxInviteId = state.invitations.reduce((max, item) => {
+    return Math.max(max, Number(item?.id) || 0);
+  }, 0);
+
+  if (!Number.isFinite(Number(state.nextInviteId)) || Number(state.nextInviteId) <= 0) {
+    state.nextInviteId = maxInviteId + 1;
+  }
+
   return state;
 }
 
@@ -114,11 +411,32 @@ function projectToResponse(project) {
   };
 }
 
+function invitationToResponse(invitation, state) {
+  const project = (state?.projects || []).find((item) => Number(item.id) === Number(invitation.projectId));
+  return {
+    id: Number(invitation.id),
+    projectId: Number(invitation.projectId),
+    projectTitle: project ? String(project.title || "Untitled Project") : "Unknown Project",
+    projectCourse: project ? String(project.course || "General Studies") : "General Studies",
+    fromUsername: String(invitation.fromUsername || ""),
+    toUsername: String(invitation.toUsername || ""),
+    status: String(invitation.status || "pending"),
+    createdAt: String(invitation.createdAt || ""),
+    updatedAt: String(invitation.updatedAt || ""),
+    respondedAt: String(invitation.respondedAt || "")
+  };
+}
+
 function canAccessProject(project, username) {
   if (!project || !username) return false;
-  if (project.ownerUsername === username) return true;
+  const targetKey = usernameKey(username);
+  if (!targetKey) return false;
+
+  if (usernameKey(project.ownerUsername) === targetKey) return true;
   if (project.visibility === "shared") return true;
-  return (project.members || []).includes(username);
+
+  return (Array.isArray(project.members) ? project.members : [])
+    .some((member) => usernameKey(member) === targetKey);
 }
 
 function seedProjectsIfEmpty() {
@@ -303,30 +621,94 @@ function migrateFromLegacySqlite() {
 
 migrateFromLegacySqlite();
 seedProjectsIfEmpty();
+const removedDuplicates = dedupeProjectsByRepoLink();
+if (removedDuplicates > 0) {
+  console.log(`Removed ${removedDuplicates} duplicate repo-linked project(s).`);
+}
 
 app.use(express.static(FRONTEND_DIR));
 app.use("/api/github", githubRoutes);
 
-app.post("/signup", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+app.post("/signup", authLimiter, async (req, res) => {
+  try {
+    const username = normalizeUsername(req.body?.username);
+    const password = String(req.body?.password || "");
+    const firstName = normalizeProfileField(req.body?.firstName, 80);
+    const lastName = normalizeProfileField(req.body?.lastName, 80);
+    const email = normalizeProfileField(req.body?.email, 160);
+    const university = normalizeProfileField(req.body?.university, 120);
+    const enrolledCourses = normalizeCourseList(req.body?.enrolledCourses || req.body?.course || "");
 
-  const users = readUsers();
-  if (users.find((u) => u.username === username)) {
-    return res.status(400).json({ error: "User already exists" });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password are required" });
+    }
+
+    if (!isValidUsername(username)) {
+      return res.status(400).json({ error: "Username must be 3-32 chars and use letters, numbers, dot, dash, or underscore" });
+    }
+
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ error: "Password must be 8-128 characters" });
+    }
+
+    const users = readUsers();
+    if (users.find((item) => usernameKey(item.username) === usernameKey(username))) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    users.push({
+      username,
+      passwordHash: await hashPassword(password),
+      firstName,
+      lastName,
+      email,
+      university,
+      course: enrolledCourses[0] || "",
+      enrolledCourses,
+      profilePhoto: "",
+      createdAt: nowIso()
+    });
+
+    saveUsers(users);
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to create user" });
   }
-
-  users.push({ username, password });
-  saveUsers(users);
-  res.json({ success: true });
 });
 
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  const users = readUsers();
-  const user = users.find((u) => u.username === username && u.password === password);
-  if (!user) return res.status(401).json({ error: "Invalid login" });
-  res.json({ success: true, username });
+app.post("/login", authLimiter, async (req, res) => {
+  try {
+    const username = normalizeUsername(req.body?.username);
+    const password = String(req.body?.password || "");
+    if (!username || !password) return res.status(401).json({ error: "Invalid login" });
+
+    const users = readUsers();
+    const index = users.findIndex((item) => usernameKey(item.username) === usernameKey(username));
+    if (index === -1) return res.status(401).json({ error: "Invalid login" });
+
+    const user = users[index];
+    const ok = await verifyPassword(user, password);
+    if (!ok) return res.status(401).json({ error: "Invalid login" });
+
+    // Transparently migrate legacy plaintext passwords to bcrypt hashes.
+    if (!isBcryptHash(user.passwordHash) && user.password) {
+      users[index] = {
+        ...user,
+        passwordHash: await hashPassword(password)
+      };
+      delete users[index].password;
+      saveUsers(users);
+    }
+
+    return res.json({
+      success: true,
+      username: String(user.username || username),
+      isAdmin: isAdminUsername(user.username || username),
+      profile: userToPublicProfile(user)
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Login failed" });
+  }
 });
 
 app.get("/users", (_req, res) => {
@@ -336,6 +718,316 @@ app.get("/users", (_req, res) => {
     .sort((a, b) => a.localeCompare(b));
 
   res.json({ users });
+});
+
+app.get("/profile", (req, res) => {
+  const username = normalizeUsername(req.query.username);
+  if (!username) {
+    return res.status(400).json({ error: "username query parameter is required" });
+  }
+
+  const users = readUsers();
+  const user = findUserRecord(users, username);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  return res.json({ profile: userToPublicProfile(user) });
+});
+
+app.put("/profile", (req, res) => {
+  const username = normalizeUsername(req.body?.username);
+  if (!username) {
+    return res.status(400).json({ error: "username is required" });
+  }
+
+  const users = readUsers();
+  const index = users.findIndex((item) => usernameKey(item.username) === usernameKey(username));
+  if (index === -1) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const enrolledCourses = normalizeCourseList(req.body?.enrolledCourses || req.body?.course || "");
+
+  users[index] = {
+    ...users[index],
+    firstName: normalizeProfileField(req.body?.firstName, 80),
+    lastName: normalizeProfileField(req.body?.lastName, 80),
+    email: normalizeProfileField(req.body?.email, 160),
+    university: normalizeProfileField(req.body?.university, 120),
+    enrolledCourses,
+    course: enrolledCourses[0] || "",
+    profilePhoto: normalizeProfilePhoto(req.body?.profilePhoto)
+  };
+
+  saveUsers(users);
+  return res.json({ success: true, profile: userToPublicProfile(users[index]) });
+});
+
+app.post("/profile/password", authLimiter, async (req, res) => {
+  try {
+    const username = normalizeUsername(req.body?.username);
+    const oldPassword = String(req.body?.oldPassword || "");
+    const newPassword = String(req.body?.newPassword || "");
+    const confirmPassword = String(req.body?.confirmPassword || "");
+
+    if (!username || !oldPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: "username, oldPassword, newPassword, and confirmPassword are required" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: "New passwords do not match" });
+    }
+
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ error: "New password must be 8-128 characters" });
+    }
+
+    const users = readUsers();
+    const index = users.findIndex((item) => usernameKey(item.username) === usernameKey(username));
+    if (index === -1) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = users[index];
+    const ok = await verifyPassword(user, oldPassword);
+    if (!ok) {
+      return res.status(401).json({ error: "Old password is incorrect" });
+    }
+
+    users[index] = {
+      ...user,
+      passwordHash: await hashPassword(newPassword)
+    };
+    delete users[index].password;
+
+    saveUsers(users);
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to update password" });
+  }
+});
+
+app.get("/circle/candidates", (req, res) => {
+  const username = normalizeUsername(req.query.username);
+  const projectId = Number(req.query.projectId);
+
+  if (!username || !projectId) {
+    return res.status(400).json({ error: "username and projectId are required" });
+  }
+
+  const state = loadState();
+  const project = state.projects.find((item) => Number(item.id) === projectId);
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  if (usernameKey(project.ownerUsername) !== usernameKey(username)) {
+    return res.status(403).json({ error: "Only the project owner can invite members" });
+  }
+
+  const users = readUsers();
+  const ownerUser = findUserRecord(users, username);
+  if (!ownerUser) {
+    return res.status(404).json({ error: "Owner profile not found" });
+  }
+
+  const existingMemberKeys = new Set(
+    (Array.isArray(project.members) ? project.members : []).map((member) => usernameKey(member))
+  );
+
+  const candidates = users
+    .filter((item) => usernameKey(item.username) !== usernameKey(username))
+    .filter((item) => !existingMemberKeys.has(usernameKey(item.username)))
+    .filter((item) => isSameUniversity(ownerUser, item))
+    .map((item) => userToPublicProfile(item));
+
+  return res.json({
+    project: {
+      id: Number(project.id),
+      title: String(project.title || "Untitled Project"),
+      course: String(project.course || "General Studies")
+    },
+    ownerProfile: userToPublicProfile(ownerUser),
+    candidates
+  });
+});
+
+app.get("/invites", (req, res) => {
+  const username = normalizeUsername(req.query.username);
+  if (!username) {
+    return res.status(400).json({ error: "username query parameter is required" });
+  }
+
+  const state = loadState();
+  const key = usernameKey(username);
+  const invitations = (state.invitations || []).map((item) => invitationToResponse(item, state));
+
+  const incoming = invitations
+    .filter((item) => usernameKey(item.toUsername) === key)
+    .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+
+  const sent = invitations
+    .filter((item) => usernameKey(item.fromUsername) === key)
+    .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+
+  return res.json({ incoming, sent });
+});
+
+app.post("/projects/:id/invites", (req, res) => {
+  const projectId = Number(req.params.id);
+  const fromUsername = normalizeUsername(req.body?.username);
+  const toUsername = normalizeUsername(req.body?.toUsername);
+
+  if (!fromUsername || !toUsername) {
+    return res.status(400).json({ error: "username and toUsername are required" });
+  }
+
+  if (usernameKey(fromUsername) === usernameKey(toUsername)) {
+    return res.status(400).json({ error: "You cannot invite yourself" });
+  }
+
+  const state = loadState();
+  const project = state.projects.find((item) => Number(item.id) === projectId);
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  if (usernameKey(project.ownerUsername) !== usernameKey(fromUsername)) {
+    return res.status(403).json({ error: "Only the project owner can invite members" });
+  }
+
+  const users = readUsers();
+  const sender = findUserRecord(users, fromUsername);
+  const receiver = findUserRecord(users, toUsername);
+  if (!sender || !receiver) {
+    return res.status(404).json({ error: "User profile not found" });
+  }
+
+  if (!isSameUniversity(sender, receiver)) {
+    return res.status(403).json({ error: "Invites are limited to users with the same university" });
+  }
+
+  const memberKeys = new Set((project.members || []).map((member) => usernameKey(member)));
+  if (memberKeys.has(usernameKey(toUsername))) {
+    return res.status(409).json({ error: "This user is already in the project" });
+  }
+
+  const existingPending = (state.invitations || []).find((item) => {
+    return Number(item.projectId) === projectId &&
+      usernameKey(item.toUsername) === usernameKey(toUsername) &&
+      String(item.status || "pending") === "pending";
+  });
+
+  if (existingPending) {
+    return res.status(409).json({ error: "A pending invite already exists for this user", invitation: invitationToResponse(existingPending, state) });
+  }
+
+  const timestamp = nowIso();
+  const invitation = {
+    id: state.nextInviteId++,
+    projectId,
+    fromUsername,
+    toUsername,
+    status: "pending",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    respondedAt: ""
+  };
+
+  state.invitations.push(invitation);
+  saveState(state);
+
+  return res.json({ success: true, invitation: invitationToResponse(invitation, state) });
+});
+
+app.post("/invites/:id/accept", (req, res) => {
+  const inviteId = Number(req.params.id);
+  const username = normalizeUsername(req.body?.username);
+
+  if (!username) {
+    return res.status(400).json({ error: "username is required" });
+  }
+
+  const state = loadState();
+  const inviteIndex = (state.invitations || []).findIndex((item) => Number(item.id) === inviteId);
+  if (inviteIndex === -1) {
+    return res.status(404).json({ error: "Invite not found" });
+  }
+
+  const invite = state.invitations[inviteIndex];
+  if (String(invite.status || "") !== "pending") {
+    return res.status(409).json({ error: "Invite is not pending" });
+  }
+
+  if (usernameKey(invite.toUsername) !== usernameKey(username)) {
+    return res.status(403).json({ error: "Only the invited user can accept this invite" });
+  }
+
+  const projectIndex = state.projects.findIndex((item) => Number(item.id) === Number(invite.projectId));
+  if (projectIndex === -1) {
+    return res.status(404).json({ error: "Project no longer exists" });
+  }
+
+  const project = state.projects[projectIndex];
+  const nextMembers = normalizeMemberList([...(project.members || []), username], project.ownerUsername);
+  const timestamp = nowIso();
+
+  state.projects[projectIndex] = {
+    ...project,
+    members: nextMembers,
+    team: formatTeamFromMembers(nextMembers),
+    updatedAt: timestamp
+  };
+
+  state.invitations[inviteIndex] = {
+    ...invite,
+    status: "accepted",
+    updatedAt: timestamp,
+    respondedAt: timestamp
+  };
+
+  saveState(state);
+  return res.json({
+    success: true,
+    invitation: invitationToResponse(state.invitations[inviteIndex], state),
+    project: projectToResponse(state.projects[projectIndex])
+  });
+});
+
+app.post("/invites/:id/decline", (req, res) => {
+  const inviteId = Number(req.params.id);
+  const username = normalizeUsername(req.body?.username);
+
+  if (!username) {
+    return res.status(400).json({ error: "username is required" });
+  }
+
+  const state = loadState();
+  const inviteIndex = (state.invitations || []).findIndex((item) => Number(item.id) === inviteId);
+  if (inviteIndex === -1) {
+    return res.status(404).json({ error: "Invite not found" });
+  }
+
+  const invite = state.invitations[inviteIndex];
+  if (String(invite.status || "") !== "pending") {
+    return res.status(409).json({ error: "Invite is not pending" });
+  }
+
+  if (usernameKey(invite.toUsername) !== usernameKey(username)) {
+    return res.status(403).json({ error: "Only the invited user can decline this invite" });
+  }
+
+  const timestamp = nowIso();
+  state.invitations[inviteIndex] = {
+    ...invite,
+    status: "declined",
+    updatedAt: timestamp,
+    respondedAt: timestamp
+  };
+
+  saveState(state);
+  return res.json({ success: true, invitation: invitationToResponse(state.invitations[inviteIndex], state) });
 });
 
 app.get("/projects", (req, res) => {
@@ -393,20 +1085,34 @@ app.post("/projects", (req, res) => {
     timeline = []
   } = req.body;
 
-  if (!username || !title) {
+  const normalizedUsername = normalizeUsername(username);
+  const normalizedTitle = String(title || "").trim();
+
+  if (!normalizedUsername || !normalizedTitle) {
     return res.status(400).json({ error: "username and title are required" });
   }
 
   const state = loadState();
   const timestamp = nowIso();
+  const repoKey = parseGitHubRepoKey(gitRepoUrl);
 
-  const normalizedMembers = normalizeMemberList(members, username);
+  if (repoKey) {
+    const existing = findProjectByRepoKey(state, repoKey);
+    if (existing) {
+      return res.status(409).json({
+        error: "This GitHub repository is already linked to another project.",
+        existingProject: projectToResponse(existing)
+      });
+    }
+  }
+
+  const normalizedMembers = normalizeMemberList(members, normalizedUsername);
   const resolvedTeam = String(team || "").trim() || `Team: ${normalizedMembers.length} ${normalizedMembers.length === 1 ? "person" : "people"}`;
 
   const project = {
     id: state.nextProjectId++,
-    title: String(title),
-    ownerUsername: String(username),
+    title: normalizedTitle,
+    ownerUsername: normalizedUsername,
     summary: String(summary),
     status: String(status || "In Progress"),
     deadline: String(deadline || ""),
@@ -458,8 +1164,21 @@ app.put("/projects/:id", (req, res) => {
   if (index === -1) return res.status(404).json({ error: "Project not found" });
 
   const existing = state.projects[index];
-  if (!username || existing.ownerUsername !== username) {
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername || usernameKey(existing.ownerUsername) !== usernameKey(normalizedUsername)) {
     return res.status(403).json({ error: "Only the owner can edit this project" });
+  }
+
+  const nextRepoUrl = gitRepoUrl !== undefined ? String(gitRepoUrl || "") : String(existing.gitRepoUrl || "");
+  const repoKey = parseGitHubRepoKey(nextRepoUrl);
+  if (repoKey) {
+    const duplicate = findProjectByRepoKey(state, repoKey, existing.id);
+    if (duplicate) {
+      return res.status(409).json({
+        error: "This GitHub repository is already linked to another project.",
+        existingProject: projectToResponse(duplicate)
+      });
+    }
   }
 
   const nextMembers = Array.isArray(members)
@@ -505,7 +1224,8 @@ app.put("/projects/:id/timeline", (req, res) => {
   if (index === -1) return res.status(404).json({ error: "Project not found" });
 
   const existing = state.projects[index];
-  if (!username || existing.ownerUsername !== username) {
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername || usernameKey(existing.ownerUsername) !== usernameKey(normalizedUsername)) {
     return res.status(403).json({ error: "Only the owner can edit timeline" });
   }
 
@@ -519,6 +1239,18 @@ app.put("/projects/:id/timeline", (req, res) => {
   saveState(state);
 
   res.json({ success: true, project: projectToResponse(updated) });
+});
+
+app.use((err, _req, res, next) => {
+  if (err && err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid JSON payload" });
+  }
+
+  if (err && String(err.message || "").includes("CORS")) {
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
+
+  return next(err);
 });
 
 const server = app.listen(3000, () => {

@@ -14,9 +14,13 @@
   "dependencies": {
     "@octokit/app": "^16.1.2",
     "@octokit/rest": "^22.0.1",
+    "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "lmdb": "^3.5.4",
     "octokit": "^5.0.5"
   }

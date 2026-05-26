@@ -1,4 +1,6 @@
 const { App } = require("octokit");
+const fs = require("fs");
+const path = require("path");
 
 let appInstance = null;
 
@@ -11,6 +13,19 @@ function getRequiredEnv(name) {
 }
 
 function getPrivateKey() {
+  const fromFile = String(process.env.GITHUB_PRIVATE_KEY_FILE || "").trim();
+  if (fromFile) {
+    const filePath = path.isAbsolute(fromFile)
+      ? fromFile
+      : path.resolve(process.cwd(), fromFile);
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`GITHUB_PRIVATE_KEY_FILE does not exist: ${filePath}`);
+    }
+
+    return fs.readFileSync(filePath, "utf8");
+  }
+
   const raw = getRequiredEnv("GITHUB_PRIVATE_KEY");
   return raw.replace(/\\n/g, "\n");
 }

@@ -238,9 +238,11 @@
     <img src="logo.png" class="logo-img" alt="Rolebit Logo">
     <a href="dashboard.html">Dashboard</a>
     <a href="my-projects.html">My Projects</a>
+    <a href="github.html">GitHub</a>
+    <a href="circle.html">Circle</a>
+    <a href="profile.html">Profile</a>
     <a href="calendar.html">Calendar</a>
     <a href="timeline.html">Timeline</a>
-    <a href="index.html">Home</a>
 
     <div class="signin-logo">
       <a href="#" onclick="logout(); return false;" title="Logout">L</a>
@@ -326,6 +328,19 @@
             Git Notes
             <input id="projectGitNotes" type="text" placeholder="Last synced commit, PR, or notes">
           </label>
+          <div class="field full">
+            Import From Linked GitHub Repo
+            <div class="member-add-row">
+              <select id="githubRepoSelect">
+                <option value="">Loading linked repositories...</option>
+              </select>
+              <button id="refreshGithubReposBtn" class="pill-btn" type="button">Refresh Repos</button>
+            </div>
+            <div class="actions" style="margin-top: 6px;">
+              <button id="importGithubRepoBtn" class="pill-btn" type="button">Import Repo Details</button>
+              <button id="createFromGithubBtn" class="pill-btn" type="button">Create Project From Repo</button>
+            </div>
+          </div>
           <label class="field full">
             Summary / Description
             <textarea id="projectSummary" placeholder="Describe the project and success criteria (optional)."></textarea>
@@ -361,14 +376,16 @@
 
   <script src="script.js"></script>
   <script>
-    const user = localStorage.getItem("rolebit_user");
+    const user = String(localStorage.getItem("rolebit_user") || "").trim();
     if (!user) {
       window.location.href = "signin.html";
     }
 
     const PROJECTS_API = "http://localhost:3000";
+    const GITHUB_API = `${PROJECTS_API}/api/github`;
     let users = [];
     let manualMembers = [];
+    let githubRepos = [];
 
     function escapeHtml(value) {
       return String(value || "")
@@ -400,6 +417,28 @@
         selected.push(user);
       }
       return selected;
+    }
+
+    function normalizeLifecycleFromText(value) {
+      const text = String(value || "").toLowerCase();
+      if (text.includes("done") || text.includes("complete")) return "Done";
+      if (text.includes("review")) return "Review";
+      if (text.includes("execution") || text.includes("progress") || text.includes("active")) return "Execution";
+      return "Planning";
+    }
+
+    function capitalizeWord(word) {
+      const value = String(word || "").trim();
+      if (!value) return "";
+      return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    }
+
+    function prettifyRepoName(name) {
+      return String(name || "")
+        .split(/[-_\s]+/)
+        .map((part) => capitalizeWord(part))
+        .join(" ")
+        .trim();
     }
 
     function dedupeMemberList(list) {
@@ -449,6 +488,123 @@
 
       feedback.textContent = `Added ${value} to project members.`;
       input.value = "";
+    }
+
+    function renderGithubRepoOptions() {
+      const select = document.getElementById("githubRepoSelect");
+      const feedback = document.getElementById("formFeedback");
+
+      if (!Array.isArray(githubRepos) || !githubRepos.length) {
+        select.innerHTML = '<option value="">No linked GitHub repositories yet</option>';
+        return;
+      }
+
+      select.innerHTML = [
+        '<option value="">Choose a linked repository</option>',
+        ...githubRepos.map((repo) => {
+          const label = escapeHtml(repo.fullName || `${repo.owner || ""}/${repo.name || ""}`);
+          return `<option value="${String(repo.id)}">${label}</option>`;
+        })
+      ].join("");
+
+      // Default to the first linked repository so import/create clicks always have a target.
+      if (githubRepos.length === 1) {
+        select.value = String(githubRepos[0].id);
+      }
+
+      feedback.textContent = `Loaded ${githubRepos.length} linked GitHub ${githubRepos.length === 1 ? "repository" : "repositories"}.`;
+    }
+
+    async function loadGithubRepos() {
+      const feedback = document.getElementById("formFeedback");
+      const select = document.getElementById("githubRepoSelect");
+      select.innerHTML = '<option value="">Loading linked repositories...</option>';
+
+      try {
+        const url = `${GITHUB_API}/repos?username=${encodeURIComponent(user)}`;
+        const response = await fetchWithTimeout(url, {
+          headers: {
+            "x-rolebit-user": user
+          }
+        });
+
+        if (!response.ok) {
+          let message = "Could not load linked repositories";
+          try {
+            const data = await response.json();
+            if (data?.error) message = data.error;
+          } catch (_ignore) {}
+          throw new Error(message);
+        }
+
+        const data = await response.json();
+        githubRepos = Array.isArray(data?.repositories) ? data.repositories : [];
+        renderGithubRepoOptions();
+      } catch (err) {
+        githubRepos = [];
+        select.innerHTML = '<option value="">No linked GitHub repositories yet</option>';
+        feedback.textContent = `GitHub repositories unavailable: ${err?.message || "Try again."}`;
+      }
+    }
+
+    function applySelectedGithubRepoToForm() {
+      const feedback = document.getElementById("formFeedback");
+      const select = document.getElementById("githubRepoSelect");
+      let selectedId = select.value;
+
+      if (!selectedId && githubRepos.length === 1) {
+        selectedId = String(githubRepos[0].id);
+        select.value = selectedId;
+      }
+
+      if (!selectedId) {
+        feedback.textContent = "Choose a linked GitHub repository first.";
+        alert("Choose a linked GitHub repository first.");
+        return null;
+      }
+
+      const repo = githubRepos.find((item) => String(item.id) === String(selectedId));
+      if (!repo) {
+        feedback.textContent = "Selected repository was not found. Refresh and try again.";
+        return null;
+      }
+
+      const fullName = String(repo.fullName || "");
+      const [owner = String(repo.owner || ""), name = String(repo.name || "")] = fullName.split("/");
+      const inferredTitle = prettifyRepoName(name) || prettifyRepoName(fullName) || "New GitHub Project";
+      const branch = String(repo.defaultBranch || "main");
+      const repoUrl = String(repo.htmlUrl || (fullName ? `https://github.com/${fullName}` : ""));
+
+      document.getElementById("projectTitle").value = inferredTitle;
+      document.getElementById("projectSummary").value = `Imported from GitHub repository ${fullName || name}.`;
+      document.getElementById("projectStatus").value = "Planning";
+      document.getElementById("projectLifecycle").value = normalizeLifecycleFromText("planning");
+      document.getElementById("projectVisibility").value = repo.private ? "private" : "shared";
+      document.getElementById("projectGitRepo").value = repoUrl;
+      document.getElementById("projectGitBranch").value = branch;
+      document.getElementById("projectGitNotes").value = `Imported from linked GitHub repo (${new Date().toLocaleString()})`;
+
+      if (owner && owner !== user) {
+        const current = dedupeMemberList([...users, ...manualMembers, user]);
+        if (!current.includes(owner)) {
+          manualMembers.push(owner);
+          renderMembers();
+          const target = Array.from(document.querySelectorAll(".member-check")).find((el) => el.value === owner);
+          if (target) target.checked = true;
+        }
+      }
+
+      feedback.textContent = `Imported ${fullName || name} into the form. Review and click Create Project.`;
+      if (typeof showTopNotification === "function") {
+        showTopNotification("Repo details imported", "success");
+      }
+      return repo;
+    }
+
+    async function handleCreateFromGithub() {
+      const repo = applySelectedGithubRepoToForm();
+      if (!repo) return;
+      await handleCreateProject();
     }
 
     async function loadUsers() {
@@ -519,10 +675,21 @@
 
         if (!response.ok) {
           let message = "Failed to create project";
+          let existingProjectId = null;
           try {
             const errorData = await response.json();
             if (errorData?.error) message = errorData.error;
+            if (errorData?.existingProject?.id) {
+              existingProjectId = errorData.existingProject.id;
+            }
           } catch (_ignore) {}
+
+          if (response.status === 409 && existingProjectId) {
+            feedback.textContent = "This repository is already linked to another project. Opening it now...";
+            window.location.href = `project-detail.html?projectId=${encodeURIComponent(existingProjectId)}`;
+            return;
+          }
+
           throw new Error(message);
         }
         const data = await response.json();
@@ -548,6 +715,9 @@
         }
 
         feedback.textContent = `Project created for ${user}. Opening project detail page...`;
+        if (typeof showTopNotification === "function") {
+          showTopNotification("Project created", "success");
+        }
         setTimeout(() => {
           if (projectId) {
             window.location.href = `project-detail.html?projectId=${encodeURIComponent(projectId)}`;
@@ -571,6 +741,9 @@
 
     document.getElementById("projectForm").addEventListener("submit", handleCreateProject);
     document.getElementById("createProjectBtn").addEventListener("click", handleCreateProject);
+    document.getElementById("refreshGithubReposBtn").addEventListener("click", loadGithubRepos);
+    document.getElementById("importGithubRepoBtn").addEventListener("click", applySelectedGithubRepoToForm);
+    document.getElementById("createFromGithubBtn").addEventListener("click", handleCreateFromGithub);
     document.getElementById("addMemberBtn").addEventListener("click", addMemberFromInput);
     document.getElementById("memberInput").addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -580,6 +753,7 @@
     });
 
     loadUsers();
+    loadGithubRepos();
   </script>
 </body>
 </html>

@@ -1,4 +1,110 @@
 const store = require("./lmdbStore");
+const crypto = require("crypto");
+
+const ENC_PREFIX = "enc:v1:";
+
+function resolveEncryptionKey() {
+  const raw = String(
+    process.env.GITHUB_DATA_ENCRYPTION_KEY ||
+    process.env.SESSION_SECRET ||
+    process.env.JWT_SECRET ||
+    process.env.GITHUB_WEBHOOK_SECRET ||
+    ""
+  ).trim();
+
+  if (!raw) return null;
+  return crypto.createHash("sha256").update(raw, "utf8").digest();
+}
+
+const ENCRYPTION_KEY = resolveEncryptionKey();
+
+function isEncryptedValue(value) {
+  return String(value || "").startsWith(ENC_PREFIX);
+}
+
+function encryptValue(value) {
+  const plain = String(value || "");
+  if (!plain) return "";
+  if (!ENCRYPTION_KEY) return plain;
+  if (isEncryptedValue(plain)) return plain;
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
+  const ciphertext = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${ENC_PREFIX}${iv.toString("base64url")}.${tag.toString("base64url")}.${ciphertext.toString("base64url")}`;
+}
+
+function decryptValue(value) {
+  const text = String(value || "");
+  if (!text) return "";
+  if (!isEncryptedValue(text)) return text;
+  if (!ENCRYPTION_KEY) return text;
+
+  try {
+    const payload = text.slice(ENC_PREFIX.length);
+    const parts = payload.split(".");
+    if (parts.length !== 3) return "";
+
+    const [ivB64, tagB64, dataB64] = parts;
+    const iv = Buffer.from(ivB64, "base64url");
+    const tag = Buffer.from(tagB64, "base64url");
+    const encrypted = Buffer.from(dataB64, "base64url");
+
+    const decipher = crypto.createDecipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return plaintext.toString("utf8");
+  } catch (_err) {
+    return "";
+  }
+}
+
+function encryptState(state) {
+  const next = copy(state);
+
+  next.installations = (Array.isArray(next.installations) ? next.installations : []).map((item) => ({
+    ...item,
+    user_id: encryptValue(item.user_id),
+    workspace_id: encryptValue(item.workspace_id),
+    project_id: encryptValue(item.project_id),
+    github_account_login: encryptValue(item.github_account_login),
+    github_account_type: encryptValue(item.github_account_type)
+  }));
+
+  next.repositories = (Array.isArray(next.repositories) ? next.repositories : []).map((item) => ({
+    ...item,
+    owner: encryptValue(item.owner),
+    name: encryptValue(item.name),
+    full_name: encryptValue(item.full_name),
+    html_url: encryptValue(item.html_url)
+  }));
+
+  return next;
+}
+
+function decryptState(state) {
+  const next = copy(state);
+
+  next.installations = (Array.isArray(next.installations) ? next.installations : []).map((item) => ({
+    ...item,
+    user_id: decryptValue(item.user_id),
+    workspace_id: decryptValue(item.workspace_id),
+    project_id: decryptValue(item.project_id),
+    github_account_login: decryptValue(item.github_account_login),
+    github_account_type: decryptValue(item.github_account_type)
+  }));
+
+  next.repositories = (Array.isArray(next.repositories) ? next.repositories : []).map((item) => ({
+    ...item,
+    owner: decryptValue(item.owner),
+    name: decryptValue(item.name),
+    full_name: decryptValue(item.full_name),
+    html_url: decryptValue(item.html_url)
+  }));
+
+  return next;
+}
 
 const DEFAULT_STATE = {
   nextInstallationId: 1,
@@ -44,24 +150,38 @@ function scopeEquals(installation, scope) {
 }
 
 function loadState() {
-  const state = store.get("github:data");
-  if (!state || typeof state !== "object") {
-    store.putSync("github:data", copy(DEFAULT_STATE));
-    return copy(DEFAULT_STATE);
+  const rawState = store.get("github:data");
+  if (!rawState || typeof rawState !== "object") {
+    const fresh = copy(DEFAULT_STATE);
+    store.putSync("github:data", encryptState(fresh));
+    return fresh;
   }
 
-  return {
+  const normalized = {
     ...copy(DEFAULT_STATE),
-    ...state,
-    installations: Array.isArray(state.installations) ? state.installations : [],
-    repositories: Array.isArray(state.repositories) ? state.repositories : [],
-    commits: Array.isArray(state.commits) ? state.commits : [],
-    commitFiles: Array.isArray(state.commitFiles) ? state.commitFiles : []
+    ...rawState,
+    installations: Array.isArray(rawState.installations) ? rawState.installations : [],
+    repositories: Array.isArray(rawState.repositories) ? rawState.repositories : [],
+    commits: Array.isArray(rawState.commits) ? rawState.commits : [],
+    commitFiles: Array.isArray(rawState.commitFiles) ? rawState.commitFiles : []
   };
+
+  const decrypted = decryptState(normalized);
+
+  // One-time transparent migration of legacy plaintext rows when a key exists.
+  if (ENCRYPTION_KEY) {
+    const encryptedSnapshot = encryptState(decrypted);
+    if (JSON.stringify(encryptedSnapshot.installations) !== JSON.stringify(normalized.installations) ||
+        JSON.stringify(encryptedSnapshot.repositories) !== JSON.stringify(normalized.repositories)) {
+      store.putSync("github:data", encryptedSnapshot);
+    }
+  }
+
+  return decrypted;
 }
 
 function saveState(state) {
-  store.putSync("github:data", state);
+  store.putSync("github:data", encryptState(state));
 }
 
 function upsertInstallation(input) {
@@ -129,6 +249,87 @@ function listInstallationsForScope(scope) {
       return String(item.user_id || "") === normalized.userId;
     })
     .map(copy);
+}
+
+function claimSingleInstallationForUser(userId) {
+  const normalizedUser = String(userId || "").trim();
+  if (!normalizedUser) return null;
+
+  const state = loadState();
+  const existingForUser = state.installations.filter(
+    (item) => String(item.user_id || "") === normalizedUser
+  );
+
+  if (existingForUser.length) {
+    return copy(existingForUser[0]);
+  }
+
+  if (state.installations.length !== 1) {
+    return null;
+  }
+
+  const installation = state.installations[0];
+  const existingOwner = String(installation.user_id || "").trim();
+  if (existingOwner && existingOwner !== normalizedUser) {
+    // Never reassign an installation that already belongs to another user.
+    return null;
+  }
+
+  if (existingOwner === normalizedUser) {
+    return copy(installation);
+  }
+
+  installation.user_id = normalizedUser;
+  installation.updated_at = nowIso();
+  saveState(state);
+  return copy(installation);
+}
+
+function claimInstallationsForUserWhenSingleGithubAccount(userId) {
+  const normalizedUser = String(userId || "").trim();
+  if (!normalizedUser) return 0;
+
+  const state = loadState();
+  if (!state.installations.length) {
+    return 0;
+  }
+
+  const hasOtherUserOwnership = state.installations.some((item) => {
+    const owner = String(item.user_id || "").trim();
+    return owner && owner !== normalizedUser;
+  });
+  if (hasOtherUserOwnership) {
+    // Refuse to mass-claim when any installation is already owned by another user.
+    return 0;
+  }
+
+  const accountSet = new Set(
+    state.installations
+      .map((item) => String(item.github_account_login || "").trim())
+      .filter(Boolean)
+  );
+
+  if (accountSet.size !== 1) {
+    return 0;
+  }
+
+  let changed = 0;
+  state.installations = state.installations.map((installation) => {
+    const owner = String(installation.user_id || "").trim();
+    if (owner) return installation;
+    changed += 1;
+    return {
+      ...installation,
+      user_id: normalizedUser,
+      updated_at: nowIso()
+    };
+  });
+
+  if (changed) {
+    saveState(state);
+  }
+
+  return changed;
 }
 
 function upsertRepository(input) {
@@ -348,6 +549,8 @@ module.exports = {
   upsertInstallation,
   listInstallationsByGithubId,
   listInstallationsForScope,
+  claimSingleInstallationForUser,
+  claimInstallationsForUserWhenSingleGithubAccount,
   upsertRepository,
   removeRepository,
   removeRepositoryByGithubRepoId,

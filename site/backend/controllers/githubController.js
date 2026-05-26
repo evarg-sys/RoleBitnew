@@ -1,6 +1,7 @@
 const githubAppService = require("../services/githubAppService");
 const githubDataStore = require("../services/githubDataStore");
 const githubWebhookService = require("../services/githubWebhookService");
+const githubAnalytics = require("../services/githubAnalytics");
 const { resolveUsername } = require("../middleware/auth");
 
 function encodeState(payload) {
@@ -75,6 +76,18 @@ function getScope(req, fallbackUser) {
     workspaceId: req.query.workspaceId || req.body?.workspaceId || "",
     projectId: req.query.projectId || req.body?.projectId || ""
   };
+}
+
+function parseLimit(value, fallback, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(max, Math.floor(parsed));
+}
+
+function parseDays(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.min(3650, Math.floor(parsed));
 }
 
 async function getInstallUrl(req, res) {
@@ -153,10 +166,85 @@ async function handleCallback(req, res) {
 async function listRepos(req, res) {
   try {
     const scope = getScope(req, req.authUser);
-    const repos = githubDataStore.listRepositoriesForScope(scope).map(mapRepoOutput);
-    return res.json({ repositories: repos });
+    const refreshRequested = ["1", "true", "yes"].includes(
+      String(req.query.refresh || "").trim().toLowerCase()
+    );
+
+    let repos = githubDataStore.listRepositoriesForScope(scope);
+    const installations = githubDataStore.listInstallationsForScope(scope);
+
+    if (!repos.length || refreshRequested) {
+      for (const installation of installations) {
+        try {
+          const repositories = await githubAppService.listInstallationRepositories(
+            installation.github_installation_id
+          );
+
+          const remoteRepoIds = new Set(
+            repositories
+              .map((repo) => Number(repo.id))
+              .filter((id) => Number.isFinite(id) && id > 0)
+          );
+
+          repositories.forEach((repo) => {
+            githubDataStore.upsertRepository({
+              installationId: installation.id,
+              githubRepoId: repo.id,
+              owner: repo.owner?.login || "",
+              name: repo.name,
+              fullName: repo.full_name,
+              defaultBranch: repo.default_branch,
+              private: repo.private,
+              htmlUrl: repo.html_url
+            });
+          });
+
+          if (refreshRequested) {
+            const currentRepos = githubDataStore
+              .listRepositoriesForScope(scope)
+              .filter((repo) => Number(repo.installation_id) === Number(installation.id));
+
+            currentRepos.forEach((repo) => {
+              const repoId = Number(repo.github_repo_id);
+              if (!remoteRepoIds.has(repoId)) {
+                githubDataStore.removeRepositoryByGithubRepoId(installation.id, repoId);
+              }
+            });
+          }
+        } catch (_err) {
+          // Keep endpoint resilient if one installation cannot be fetched.
+        }
+      }
+
+      repos = githubDataStore.listRepositoriesForScope(scope);
+    }
+
+    const mappedRepos = repos.map(mapRepoOutput);
+    return res.json({ repositories: mappedRepos });
   } catch (err) {
     return res.status(500).json({ error: err.message || "Failed to load repositories" });
+  }
+}
+
+async function listInstallations(req, res) {
+  try {
+    const scope = getScope(req, req.authUser);
+    const autoLinked = false;
+    const installations = githubDataStore.listInstallationsForScope(scope).map((installation) => ({
+      id: installation.id,
+      githubInstallationId: installation.github_installation_id,
+      githubAccountLogin: installation.github_account_login,
+      githubAccountType: installation.github_account_type,
+      userId: installation.user_id,
+      workspaceId: installation.workspace_id,
+      projectId: installation.project_id,
+      createdAt: installation.created_at,
+      updatedAt: installation.updated_at
+    }));
+
+    return res.json({ installations, autoLinked });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to load installations" });
   }
 }
 
@@ -180,6 +268,62 @@ async function listRepoCommits(req, res) {
     return res.json({ commits });
   } catch (err) {
     return res.status(500).json({ error: err.message || "Failed to load commits" });
+  }
+}
+
+async function getRepoSummary(req, res) {
+  try {
+    const scope = getScope(req, req.authUser);
+    const repoId = Number(req.params.repoId);
+    const repo = githubDataStore.getRepositoryForScope(repoId, scope);
+
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found for this user/workspace" });
+    }
+
+    const commits = githubDataStore.listCommitsForRepository(repoId, {
+      branch: req.query.branch || "",
+      limit: parseLimit(req.query.limit, 500, 1000)
+    });
+
+    const summary = githubAnalytics.buildRepositorySummary(commits, {
+      days: parseDays(req.query.days)
+    });
+
+    return res.json({
+      repository: mapRepoOutput(repo),
+      summary
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to build repository summary" });
+  }
+}
+
+async function getRepoChangelog(req, res) {
+  try {
+    const scope = getScope(req, req.authUser);
+    const repoId = Number(req.params.repoId);
+    const repo = githubDataStore.getRepositoryForScope(repoId, scope);
+
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found for this user/workspace" });
+    }
+
+    const commits = githubDataStore.listCommitsForRepository(repoId, {
+      branch: req.query.branch || "",
+      limit: parseLimit(req.query.limit, 200, 1000)
+    });
+
+    const changelog = githubAnalytics.buildChangelog(commits, {
+      days: parseDays(req.query.days)
+    });
+
+    return res.json({
+      repository: mapRepoOutput(repo),
+      changelog
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to build repository changelog" });
   }
 }
 
@@ -291,8 +435,11 @@ async function webhook(req, res) {
 module.exports = {
   getInstallUrl,
   handleCallback,
+  listInstallations,
   listRepos,
   listRepoCommits,
+  getRepoSummary,
+  getRepoChangelog,
   syncRepo,
   disconnectRepo,
   webhook
