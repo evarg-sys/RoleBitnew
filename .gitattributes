@@ -1,0 +1,26 @@
+# Normalize line endings and prevent CRLF warnings on Windows.
+* text=auto
+
+# Keep source and config files in LF.
+*.js text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.env text eol=lf
+*.pem text eol=lf
+
+# Treat data/binary artifacts as binary.
+*.lmdb -text
+*.lmdb-lock -text
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.ico -text
+*.woff -text
+*.woff2 -text
+*.ttf -text

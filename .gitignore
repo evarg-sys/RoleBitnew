@@ -8,6 +8,11 @@ yarn-error.log*
 .env
 .env.local
 
+# Private keys / secrets
+*.pem
+*.key
+site/backend/*.private-key_new.pem
+
 # OS
 .DS_Store
 Thumbs.db
