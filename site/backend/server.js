@@ -13,6 +13,7 @@ app.use(express.json({
   }
 }));
 
+const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 const USERS_FILE = path.join(__dirname, "users.json");
 const LEGACY_SQLITE_PATH = path.join(__dirname, "rolebit.db");
 
@@ -303,6 +304,7 @@ function migrateFromLegacySqlite() {
 migrateFromLegacySqlite();
 seedProjectsIfEmpty();
 
+app.use(express.static(FRONTEND_DIR));
 app.use("/api/github", githubRoutes);
 
 app.post("/signup", (req, res) => {
