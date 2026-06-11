@@ -13,6 +13,9 @@ router.get("/repos", requireAuth, githubController.listRepos);
 router.get("/repos/:repoId/commits", requireAuth, githubController.listRepoCommits);
 router.get("/repos/:repoId/summary", requireAuth, githubController.getRepoSummary);
 router.get("/repos/:repoId/changelog", requireAuth, githubController.getRepoChangelog);
+router.post("/repos/:repoId/ai/analyze", requireAuth, githubController.analyzeRepoWithClaude);
+router.get("/repos/:repoId/ai/latest", requireAuth, githubController.getLatestRepoAiPlan);
+router.post("/repos/:repoId/ai/:planId/apply", requireAuth, githubController.applyRepoAiPlan);
 router.post("/sync/:repoId", requireAuth, githubController.syncRepo);
 router.delete("/repos/:repoId", requireAuth, githubController.disconnectRepo);
 

@@ -62,7 +62,7 @@ const authLimiter = rateLimit({
 
 app.use(globalLimiter);
 app.use(express.json({
-  limit: "64kb",
+  limit: "3mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf.toString("utf8");
   }
@@ -167,6 +167,16 @@ function isSameUniversity(leftUser, rightUser) {
   const rightUni = textKey(rightUser?.university);
 
   if (!leftUni || !rightUni) return false;
+  return leftUni === rightUni;
+}
+
+function canInviteBasedOnUniversity(leftUser, rightUser) {
+  const leftUni = textKey(leftUser?.university);
+  const rightUni = textKey(rightUser?.university);
+
+  // Keep strict matching only when both users have a university value.
+  // If either side has not set it yet, allow invite flow for onboarding/testing.
+  if (!leftUni || !rightUni) return true;
   return leftUni === rightUni;
 }
 
@@ -839,7 +849,7 @@ app.get("/circle/candidates", (req, res) => {
   const candidates = users
     .filter((item) => usernameKey(item.username) !== usernameKey(username))
     .filter((item) => !existingMemberKeys.has(usernameKey(item.username)))
-    .filter((item) => isSameUniversity(ownerUser, item))
+    .filter((item) => canInviteBasedOnUniversity(ownerUser, item))
     .map((item) => userToPublicProfile(item));
 
   return res.json({
@@ -904,7 +914,7 @@ app.post("/projects/:id/invites", (req, res) => {
     return res.status(404).json({ error: "User profile not found" });
   }
 
-  if (!isSameUniversity(sender, receiver)) {
+  if (!canInviteBasedOnUniversity(sender, receiver)) {
     return res.status(403).json({ error: "Invites are limited to users with the same university" });
   }
 
@@ -1211,6 +1221,35 @@ app.put("/projects/:id", (req, res) => {
   res.json({ success: true, project: projectToResponse(updated) });
 });
 
+app.delete("/projects/:id", (req, res) => {
+  const projectId = Number(req.params.id);
+  const username = normalizeUsername(req.query.username || req.body?.username || "");
+
+  if (!username) {
+    return res.status(400).json({ error: "username is required" });
+  }
+
+  const state = loadState();
+  const index = state.projects.findIndex((item) => item.id === projectId);
+  if (index === -1) return res.status(404).json({ error: "Project not found" });
+
+  const existing = state.projects[index];
+  if (usernameKey(existing.ownerUsername) !== usernameKey(username)) {
+    return res.status(403).json({ error: "Only the owner can delete this project" });
+  }
+
+  state.projects.splice(index, 1);
+  state.invitations = (Array.isArray(state.invitations) ? state.invitations : []).filter(
+    (invite) => Number(invite.projectId) !== projectId
+  );
+
+  const maxId = state.projects.reduce((highest, item) => Math.max(highest, Number(item.id) || 0), 0);
+  state.nextProjectId = Math.max(maxId + 1, 1);
+  saveState(state);
+
+  res.json({ success: true });
+});
+
 app.put("/projects/:id/timeline", (req, res) => {
   const projectId = Number(req.params.id);
   const { username, timeline } = req.body;
@@ -1242,6 +1281,10 @@ app.put("/projects/:id/timeline", (req, res) => {
 });
 
 app.use((err, _req, res, next) => {
+  if (err && err.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request payload is too large. Use a smaller profile photo." });
+  }
+
   if (err && err.type === "entity.parse.failed") {
     return res.status(400).json({ error: "Invalid JSON payload" });
   }

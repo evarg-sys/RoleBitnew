@@ -1,5 +1,6 @@
 const githubAppService = require("./githubAppService");
 const githubDataStore = require("./githubDataStore");
+const claudePlanningService = require("./claudePlanningService");
 
 function normalizeBranch(ref) {
   const value = String(ref || "");
@@ -101,6 +102,25 @@ async function handlePushEvent(payload) {
         sha,
         fallbackCommit: commit
       });
+    }
+
+    const shouldAnalyze = ["1", "true", "yes"].includes(
+      String(process.env.CLAUDE_AUTO_ANALYZE_ON_PUSH || "").trim().toLowerCase()
+    );
+
+    if (shouldAnalyze) {
+      try {
+        await claudePlanningService.createPlanForRepository({
+          repository,
+          createdBy: String(installation.user_id || "webhook"),
+          trigger: "github_push_webhook",
+          branch,
+          sourceCommitShas: commits.map((item) => String(item.id || "").trim()).filter(Boolean),
+          commitLimit: Number(process.env.CLAUDE_AUTO_ANALYZE_COMMIT_LIMIT || 10)
+        });
+      } catch (_err) {
+        // Webhook processing should not fail due to AI planning errors.
+      }
     }
   }
 }

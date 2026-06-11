@@ -2,6 +2,7 @@ const githubAppService = require("../services/githubAppService");
 const githubDataStore = require("../services/githubDataStore");
 const githubWebhookService = require("../services/githubWebhookService");
 const githubAnalytics = require("../services/githubAnalytics");
+const claudePlanningService = require("../services/claudePlanningService");
 const { resolveUsername } = require("../middleware/auth");
 
 function encodeState(payload) {
@@ -67,6 +68,27 @@ function mapCommitOutput(commit) {
           patch: file.patch
         }))
       : []
+  };
+}
+
+function mapAiPlanOutput(plan) {
+  if (!plan) return null;
+  return {
+    id: plan.id,
+    repositoryId: plan.repositoryId,
+    installationId: plan.installationId,
+    projectId: plan.projectId,
+    trigger: plan.trigger,
+    status: plan.status,
+    provider: plan.provider,
+    model: plan.model,
+    sourceCommitShas: Array.isArray(plan.sourceCommitShas) ? plan.sourceCommitShas : [],
+    projectDescription: plan.projectDescription || "",
+    confirmationPrompt: plan.confirmationPrompt || "",
+    analysis: plan.analysis || {},
+    appliedMeta: plan.appliedMeta || null,
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt
   };
 }
 
@@ -348,6 +370,7 @@ async function syncRepo(req, res) {
     );
 
     let synced = 0;
+    const syncedShas = [];
 
     for (const commitRef of commits) {
       const sha = String(commitRef.sha || "").trim();
@@ -387,12 +410,120 @@ async function syncRepo(req, res) {
           : []
       );
 
+      syncedShas.push(sha);
       synced += 1;
     }
 
-    return res.json({ success: true, synced });
+    let aiPlan = null;
+    try {
+      aiPlan = await claudePlanningService.createPlanForRepository({
+        repository: repo,
+        createdBy: scope.userId || "system",
+        trigger: "manual_sync",
+        branch,
+        sourceCommitShas: syncedShas,
+        commitLimit: Number(req.body?.commitLimit || 12),
+        projectDescription: String(req.body?.projectDescription || "")
+      });
+    } catch (_err) {
+      aiPlan = null;
+    }
+
+    return res.json({
+      success: true,
+      synced,
+      aiPlan: mapAiPlanOutput(aiPlan)
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message || "Failed to sync repository" });
+  }
+}
+
+async function analyzeRepoWithClaude(req, res) {
+  try {
+    const scope = getScope(req, req.authUser);
+    const repoId = Number(req.params.repoId);
+    const repo = githubDataStore.getRepositoryForScope(repoId, scope);
+
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found for this user/workspace" });
+    }
+
+    const plan = await claudePlanningService.createPlanForRepository({
+      repository: repo,
+      createdBy: scope.userId || "system",
+      trigger: "manual_analyze",
+      branch: req.body?.branch || req.query.branch || repo.default_branch || "main",
+      commitLimit: req.body?.commitLimit || req.query.commitLimit || 12,
+      projectDescription: req.body?.projectDescription || "",
+      sourceCommitShas: Array.isArray(req.body?.sourceCommitShas) ? req.body.sourceCommitShas : []
+    });
+
+    if (!plan) {
+      return res.status(400).json({
+        error: "No eligible commits found for AI analysis. Make sure commits contain messages and are synced."
+      });
+    }
+
+    return res.json({
+      success: true,
+      repository: mapRepoOutput(repo),
+      plan: mapAiPlanOutput(plan)
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "AI analysis failed" });
+  }
+}
+
+async function getLatestRepoAiPlan(req, res) {
+  try {
+    const scope = getScope(req, req.authUser);
+    const repoId = Number(req.params.repoId);
+    const repo = githubDataStore.getRepositoryForScope(repoId, scope);
+
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found for this user/workspace" });
+    }
+
+    const plan = claudePlanningService.getLatestPlanForRepository(repo.id);
+    if (!plan) {
+      return res.status(404).json({ error: "No AI plans found for this repository" });
+    }
+
+    return res.json({
+      repository: mapRepoOutput(repo),
+      plan: mapAiPlanOutput(plan)
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to load AI plan" });
+  }
+}
+
+async function applyRepoAiPlan(req, res) {
+  try {
+    const scope = getScope(req, req.authUser);
+    const repoId = Number(req.params.repoId);
+    const planId = Number(req.params.planId);
+    const repo = githubDataStore.getRepositoryForScope(repoId, scope);
+
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found for this user/workspace" });
+    }
+
+    const plan = claudePlanningService.getPlanById(planId);
+    if (!plan || Number(plan.repositoryId) !== Number(repo.id)) {
+      return res.status(404).json({ error: "AI plan not found for this repository" });
+    }
+
+    const applied = claudePlanningService.applyPlan(planId, scope.userId);
+    return res.json({
+      success: true,
+      repository: mapRepoOutput(repo),
+      plan: mapAiPlanOutput(applied.plan),
+      project: applied.project
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || "Failed to apply AI plan" });
   }
 }
 
@@ -440,6 +571,9 @@ module.exports = {
   listRepoCommits,
   getRepoSummary,
   getRepoChangelog,
+  analyzeRepoWithClaude,
+  getLatestRepoAiPlan,
+  applyRepoAiPlan,
   syncRepo,
   disconnectRepo,
   webhook
