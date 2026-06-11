@@ -162,9 +162,14 @@ function loadUser() {
 
   if (u) {
     const w = document.getElementById("welcome");
+    const d = document.getElementById("homeDashboardBtn");
     const l = document.getElementById("logoutBtn");
-    if (w) w.innerText = "Welcome, " + u;
-    if (l) l.style.display = "inline";
+    if (w) {
+      w.innerText = "Welcome, " + u;
+      w.classList.add("active");
+    }
+    if (d) d.style.display = "inline-flex";
+    if (l) l.style.display = "inline-flex";
   }
 
   const protectedPages = ["dashboard", "projects", "circle", "profile", "calendar", "timeline", "github"];
@@ -195,6 +200,10 @@ function logout() {
   localStorage.removeItem("rolebit_user");
   localStorage.removeItem("rolebit_admin");
   window.location.href = "signin.html";
+}
+
+function goDashboard() {
+  window.location.href = "dashboard.html";
 }
 
 function goWaitlist() {

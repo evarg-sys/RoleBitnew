@@ -115,6 +115,17 @@
       color: rgba(238, 248, 255, 0.98);
     }
 
+    .pill-btn.danger {
+      background: rgba(138, 42, 42, 0.45);
+      border-color: rgba(255, 133, 133, 0.62);
+      color: rgba(255, 230, 230, 0.98);
+    }
+
+    .pill-btn.danger:hover {
+      background: rgba(170, 52, 52, 0.55);
+      border-color: rgba(255, 156, 156, 0.78);
+    }
+
     .projects-header h1 {
       font-size: 2rem;
       color: rgba(255, 255, 255, 0.96);
@@ -717,7 +728,7 @@
       </div>
       <div class="detail-actions">
         <button class="pill-btn" type="button" onclick="window.location.href='project-detail.html?projectId=${encodeURIComponent(project.id)}'">Open Project Detail Page</button>
-        ${project.isOwned ? '<button id="saveProjectBtn" class="pill-btn primary" type="button">Save Project</button>' : '<div class="detail-mini">Shared project: view only</div>'}
+        ${project.isOwned ? '<button id="saveProjectBtn" class="pill-btn primary" type="button">Save Project</button><button id="deleteProjectBtn" class="pill-btn danger" type="button">Delete Project</button>' : '<div class="detail-mini">Shared project: view only</div>'}
       </div>
     `;
   }
@@ -774,6 +785,21 @@
     return response.json();
   }
 
+  async function deleteProject(projectId) {
+    const response = await fetch(`${PROJECTS_API_BASE}/projects/${encodeURIComponent(projectId)}?username=${encodeURIComponent(user)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) {
+      let message = "Failed to delete project";
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch (_ignore) {}
+      throw new Error(message);
+    }
+    return response.json();
+  }
+
   function getSelectedMembers() {
     const selected = Array.from(document.querySelectorAll(".edit-member-checkbox:checked")).map((item) => item.value);
     if (!selected.includes(user)) selected.push(user);
@@ -813,6 +839,24 @@
         course: document.getElementById("editCourse")?.value || project.course,
         risk: document.getElementById("editRisk")?.value || project.risk
       }).then(() => loadProjects()).catch(() => alert("Could not save project right now."));
+      return;
+    }
+
+    const deleteBtn = event.target.closest("#deleteProjectBtn");
+    if (deleteBtn) {
+      const project = projects.find((item) => item.id === selectedProjectId);
+      if (!project || !project.isOwned) return;
+
+      const confirmed = window.confirm(`Delete project \"${project.name}\"? This cannot be undone.`);
+      if (!confirmed) return;
+
+      deleteProject(project.id)
+        .then(() => {
+          const subtitle = document.getElementById("projectsSubtitle");
+          if (subtitle) subtitle.textContent = `Deleted project ${project.name}.`;
+          loadProjects();
+        })
+        .catch((err) => alert(err?.message || "Could not delete project right now."));
       return;
     }
 

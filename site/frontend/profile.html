@@ -367,15 +367,15 @@
           <div class="password-grid">
             <label class="field">
               Old Password
-              <input id="oldPassword" type="password" placeholder="Current password">
+              <input id="oldPassword" type="password" placeholder="Current password" autocomplete="current-password">
             </label>
             <label class="field">
               New Password
-              <input id="newPassword" type="password" placeholder="New password">
+              <input id="newPassword" type="password" placeholder="New password" autocomplete="new-password">
             </label>
             <label class="field">
               Confirm New Password
-              <input id="confirmPassword" type="password" placeholder="Repeat new password">
+              <input id="confirmPassword" type="password" placeholder="Repeat new password" autocomplete="new-password">
             </label>
           </div>
           <div class="actions">
@@ -406,7 +406,7 @@
   <script src="script.js"></script>
   <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
   <script>
-    const API = "http://localhost:3000";
+    const API_BASE = (typeof API === "string" && API) ? API : "http://localhost:3000";
     const user = String(localStorage.getItem("rolebit_user") || "").trim();
     if (!user) window.location.href = "signin.html";
 
@@ -479,6 +479,12 @@
         localStorage.removeItem("rolebit_profile_photo");
       }
       renderPhoto(currentPhoto, user);
+    }
+
+    function clearPasswordFields() {
+      document.getElementById("oldPassword").value = "";
+      document.getElementById("newPassword").value = "";
+      document.getElementById("confirmPassword").value = "";
     }
 
     async function ensureCropperLoaded() {
@@ -582,9 +588,10 @@
       if (cached) {
         hydrateProfileForm(cached);
       }
+      clearPasswordFields();
 
       try {
-        const data = await fetchJson(`${API}/profile?username=${encodeURIComponent(user)}`);
+        const data = await fetchJson(`${API_BASE}/profile?username=${encodeURIComponent(user)}`);
         const apiProfile = data.profile || {};
         const merged = {
           ...(cached || {}),
@@ -623,7 +630,7 @@
       };
 
       try {
-        const data = await fetchJson(`${API}/profile`, {
+        const data = await fetchJson(`${API_BASE}/profile`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -658,7 +665,7 @@
       }
 
       try {
-        await fetchJson(`${API}/profile/password`, {
+        await fetchJson(`${API_BASE}/profile/password`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: user, oldPassword, newPassword, confirmPassword })
@@ -714,6 +721,7 @@
       logout();
     });
 
+    clearPasswordFields();
     loadProfile();
   </script>
 </body>

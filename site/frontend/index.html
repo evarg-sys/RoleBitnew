@@ -5,11 +5,12 @@
   <link rel="stylesheet" href="style.css">
   <script src="page-loader.js"></script>
 </head>
-<body>
-  <div style="position:fixed;top:20px;right:30px;z-index:999;">
-  <span id="welcome"></span>
-  <button id="logoutBtn" onclick="logout()" style="display:none">Logout</button>
-</div>
+<body class="home-page">
+  <div class="home-user-bar">
+    <span id="welcome" class="home-welcome"></span>
+    <button id="homeDashboardBtn" class="home-dashboard-btn" onclick="goDashboard()" style="display:none">Dashboard</button>
+    <button id="logoutBtn" class="home-logout-btn" onclick="logout()" style="display:none">Logout</button>
+  </div>
 
 <script src="script.js"></script>
 

@@ -244,7 +244,7 @@
 
   <script src="script.js"></script>
   <script>
-    const API = "http://localhost:3000";
+    const API_BASE = (typeof API === "string" && API) ? API : "http://localhost:3000";
     const user = String(localStorage.getItem("rolebit_user") || "").trim();
     if (!user) window.location.href = "signin.html";
 
@@ -294,7 +294,7 @@
     }
 
     async function loadOwnedProjects() {
-      const data = await fetchJson(`${API}/projects?username=${encodeURIComponent(user)}`);
+      const data = await fetchJson(`${API_BASE}/projects?username=${encodeURIComponent(user)}`);
       const all = Array.isArray(data.projects) ? data.projects : [];
       ownedProjects = all.filter((project) => userKey(project.ownerUsername) === userKey(user));
       renderProjectOptions();
@@ -303,7 +303,7 @@
     async function sendInvite(targetUsername) {
       const status = document.getElementById("inviteStatus");
       try {
-        await fetchJson(`${API}/projects/${encodeURIComponent(selectedProjectId)}/invites`, {
+        await fetchJson(`${API_BASE}/projects/${encodeURIComponent(selectedProjectId)}/invites`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: user, toUsername: targetUsername })
@@ -329,7 +329,7 @@
 
       status.textContent = "Loading people from your same university...";
       try {
-        const data = await fetchJson(`${API}/circle/candidates?username=${encodeURIComponent(user)}&projectId=${encodeURIComponent(selectedProjectId)}`);
+        const data = await fetchJson(`${API_BASE}/circle/candidates?username=${encodeURIComponent(user)}&projectId=${encodeURIComponent(selectedProjectId)}`);
         const candidates = Array.isArray(data.candidates) ? data.candidates : [];
 
         if (!candidates.length) {
@@ -357,7 +357,7 @@
     }
 
     async function respondInvite(inviteId, action) {
-      await fetchJson(`${API}/invites/${encodeURIComponent(inviteId)}/${action}`, {
+      await fetchJson(`${API_BASE}/invites/${encodeURIComponent(inviteId)}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: user })
@@ -408,7 +408,7 @@
     }
 
     async function loadInvites() {
-      const data = await fetchJson(`${API}/invites?username=${encodeURIComponent(user)}`);
+      const data = await fetchJson(`${API_BASE}/invites?username=${encodeURIComponent(user)}`);
       renderIncoming(Array.isArray(data.incoming) ? data.incoming : []);
       renderSent(Array.isArray(data.sent) ? data.sent : []);
     }
